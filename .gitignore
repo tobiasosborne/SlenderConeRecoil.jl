@@ -3,3 +3,12 @@
 .dolt/
 *.db
 .beads-credential-key
+
+# Node / Playwright (paper download tooling)
+node_modules/
+package-lock.json
+
+# Papers (large PDFs, not tracked in git)
+docs/papers/*.pdf
+docs/papers/*.png
+docs/papers/.browser-profile/
