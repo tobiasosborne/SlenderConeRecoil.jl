@@ -65,6 +65,7 @@ function add(args::SExpr...)
     end
     isempty(terms) && return Num(0)
     length(terms) == 1 && return terms[1]
+    sort!(terms, by=_sort_key)
     Add(terms)
 end
 
@@ -91,8 +92,17 @@ function mul(args::SExpr...)
         return Num(coeff)
     end
     isone(coeff) && length(factors) == 1 && return factors[1]
+    sort!(factors, by=_sort_key)
     Mul(coeff, factors)
 end
+
+# Canonical ordering key for deterministic equality
+_sort_key(e::Sym) = (0, string(e.name), 0)
+_sort_key(e::Num) = (1, "", Float64(e.val))
+_sort_key(e::Pow) = (2, string(_sort_key(e.base)), 0)
+_sort_key(e::Func) = (3, string(e.name), 0)
+_sort_key(e::Add) = (4, "", length(e.terms))
+_sort_key(e::Mul) = (5, "", Float64(e.coeff))
 
 function pow(base::SExpr, exp::SExpr)
     exp isa Num && iszero(exp.val) && return Num(1)
@@ -139,6 +149,8 @@ function walk(f, e::SExpr)
         f(pow(walk(f, e.base), walk(f, e.exp)))
     elseif e isa Func
         f(Func(e.name, [walk(f, a) for a in e.args]))
+    else
+        error("walk: unhandled expression type $(typeof(e))")
     end
 end
 

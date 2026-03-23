@@ -49,9 +49,8 @@ include(joinpath(@__DIR__, "..", "src", "expr.jl"))
         e = r + z
         result = substitute(e, r, Num(1))
         @test result isa Add
-        # After substitution: Num(1) + z
-        @test result.terms[1] == Num(1)
-        @test result.terms[2] == z
+        # After substitution: Num(1) + z (order may vary due to canonical sort)
+        @test Set(result.terms) == Set([Num(1), z])
 
         # Multi-pair substitution
         e2 = r * z

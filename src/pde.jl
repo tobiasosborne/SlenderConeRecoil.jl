@@ -42,25 +42,24 @@ Uses proper non-uniform stencils: central differences with variable spacing.
 """
 function ddz!(df, f, z)
     N = length(f)
-    # Forward difference at left boundary
+    # 2nd-order forward difference at left boundary (non-uniform grid)
     h1 = z[2] - z[1]
     h2 = z[3] - z[2]
-    df[1] = (-f[1]*(h2 + 2h1) + f[2]*(h1+h2)^2/h1 - f[3]*h1^2/(h2*(h1+h2))) /
-            ((h1+h2)*h1 + h2*h1)
-    # Simpler 2nd-order forward
-    df[1] = (-3f[1] + 4f[2] - f[3]) / (z[3] - z[1])
+    df[1] = (-h2*(2h1+h2)*f[1] + (h1+h2)^2*f[2] - h1^2*f[3]) / (h1*h2*(h1+h2))
 
     # Central differences for interior (non-uniform spacing)
     for i in 2:N-1
         hm = z[i] - z[i-1]
         hp = z[i+1] - z[i]
-        # Standard non-uniform central difference
         df[i] = (f[i+1]*hm^2 + f[i]*(hp^2 - hm^2) - f[i-1]*hp^2) /
                 (hp * hm * (hp + hm))
     end
 
-    # Backward difference at right boundary
-    df[N] = (3f[N] - 4f[N-1] + f[N-2]) / (z[N] - z[N-2])
+    # 2nd-order backward difference at right boundary (non-uniform grid)
+    hm1 = z[N] - z[N-1]
+    hm2 = z[N-1] - z[N-2]
+    df[N] = (hm2*(2hm1+hm2)*f[N] - (hm1+hm2)^2*f[N-1] + hm1^2*f[N-2]) /
+            (hm1*hm2*(hm1+hm2))
 end
 
 # ── PDE right-hand side ───────────────────────────────────────────────
@@ -71,7 +70,7 @@ The 1D slender model in primitive variables (R, u):
      = -u·uz + Rz/R²
 """
 function pde_rhs!(dw, w, p, t)
-    N, z, Rz_buf, uz_buf, invR_z_buf = p
+    N, z, Rz_buf, uz_buf, invR_z_buf, invR_buf = p
     R_orig = @view w[1:N]
     u_orig = @view w[N+1:2N]
     dR = @view dw[1:N]
@@ -83,9 +82,9 @@ function pde_rhs!(dw, w, p, t)
     ddz!(Rz_buf, R_orig, z)
     ddz!(uz_buf, u_orig, z)
 
-    # Compute ∂/∂z(1/R)
-    invR = 1.0 ./ R_orig
-    ddz!(invR_z_buf, invR, z)
+    # Compute ∂/∂z(1/R) — no allocation
+    invR_buf .= 1.0 ./ R_orig
+    ddz!(invR_z_buf, invR_buf, z)
 
     for i in 1:N
         dR[i] = -u_orig[i] * Rz_buf[i] - 0.5 * R_orig[i] * uz_buf[i]
@@ -117,12 +116,13 @@ function solve_pde(; ε::Float64=0.1, N::Int=200, z_min::Float64=0.01,
     u0 = zeros(N)
     w0 = vcat(R0, u0)
 
-    # Buffers for spatial derivatives
+    # Buffers for spatial derivatives (no allocation in RHS)
     Rz_buf = zeros(N)
     uz_buf = zeros(N)
     invR_z_buf = zeros(N)
+    invR_buf = zeros(N)
 
-    p = (N, z, Rz_buf, uz_buf, invR_z_buf)
+    p = (N, z, Rz_buf, uz_buf, invR_z_buf, invR_buf)
     tspan = (0.0, t_end)
 
     # Save at specified times
