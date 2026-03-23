@@ -91,8 +91,9 @@ function pde_rhs!(dw, w, p, t)
         du[i] = -u_orig[i] * uz_buf[i] - invR_z_buf[i]  # correct sign: -∂/∂z(1/R) = Rz/R²
     end
 
-    # Left BC: u = 0 at truncated tip
+    # Left BC at truncated tip: u = 0, R fixed (no unphysical shrinkage)
     du[1] = 0.0
+    dR[1] = 0.0
 
     # Outflow BC at right boundary: zero gradient
     dR[N] = dR[N-1]

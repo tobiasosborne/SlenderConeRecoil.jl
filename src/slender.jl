@@ -4,7 +4,7 @@
 #
 # The 1D slender model (nondimensional, γ/ρ = 1):
 #   ∂(R²)/∂t + ∂(R²u)/∂z = 0        (mass conservation)
-#   ∂u/∂t + u ∂u/∂z = ∂/∂z (1/R)    (momentum with capillary pressure)
+#   ∂u/∂t + u ∂u/∂z = -∂/∂z(1/R) = Rz/R²   (momentum, capillary recoil)
 #
 # where R(z,t) is the free-surface radius and u(z,t) is the axial velocity.
 

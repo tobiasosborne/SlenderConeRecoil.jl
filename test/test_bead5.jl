@@ -47,8 +47,8 @@ include(joinpath(@__DIR__, "..", "src", "inner.jl"))
         sol = solve_inner_bvp(ξ₀=0.0, S₀=1.0, ξ_max=50.0, ε=0.1)
         slopes = far_field_slope(sol)
         @test length(slopes) > 0
-        # After Newton iteration, far-field slope should be near ε
-        @test abs(slopes[end] - 0.1) < 0.05
+        # After Newton iteration, far-field slope should match ε closely
+        @test abs(slopes[end] - 0.1) < 0.001
     end
 
     @testset "ODE residual along solution" begin

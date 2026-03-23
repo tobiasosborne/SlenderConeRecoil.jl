@@ -24,7 +24,7 @@ const sym_Uξ = Sym(:Uξ)     # dU/dξ
 #
 # Starting from the 1D slender model:
 #   (1) ∂(R²)/∂t + ∂(R²u)/∂z = 0
-#   (2) ∂u/∂t + u·∂u/∂z = ∂/∂z(1/R)
+#   (2) ∂u/∂t + u·∂u/∂z = -∂/∂z(1/R)   [from Bernoulli: capillary recoil]
 #
 # Substituting z = t^{2/3}·ξ, R = t^{2/3}·S(ξ), u = (2/3)t^{-1/3}·U(ξ):
 #
@@ -65,23 +65,13 @@ const sym_Uξ = Sym(:Uξ)     # dU/dξ
 # That's equivalent to: 2S(U - ξ)S'/S + ... hmm. Let me just write the
 # canonical form as an ODE for S' and U'.
 #
-# Momentum equation: ∂u/∂t + u·∂u/∂z = ∂/∂z(1/R)
-#   -(2/9)t^{-4/3}(U + 2ξU') + (2/3)t^{-1/3}U·(2/3)t^{-1}U' = -t^{-4/3}S'/S²
-#   -(2/9)t^{-4/3}(U + 2ξU') + (4/9)t^{-4/3}UU' = -t^{-4/3}S'/S²
+# Momentum equation: ∂u/∂t + u·∂u/∂z = -∂/∂z(1/R)
+#   LHS: -(2/9)t^{-4/3}(U + 2ξU') + (4/9)t^{-4/3}UU'
+#   RHS: -∂/∂z(1/R) = t^{-4/3}·S'/S²
 #
-#   Multiply by -t^{4/3}·(-1)... divide by t^{-4/3}:
-#   -(2/9)(U + 2ξU') + (4/9)UU' = -S'/S²
-#   -(2/9)U - (4/9)ξU' + (4/9)UU' = -S'/S²
-#   -(2/9)U + (4/9)U'(U - ξ) + S'/S² = 0
-#
-#   Multiply by 9/2:
-#   -U + 2U'(U - ξ) + (9/2)S'/S² = 0
-#
-# Hmm, let me use the more standard form. Let V = U - (2/3)ξ be the
-# velocity in the similarity frame.
-#
-# Actually, the clearest form uses the substitution directly.
-# Let me just define the ODE system in canonical resolved form.
+#   Dividing by t^{-4/3}:
+#   -(2/9)(U + 2ξU') + (4/9)UU' = S'/S²
+#   -(2/9)U + (4/9)(U - ξ)U' - S'/S² = 0
 
 # ── The similarity ODE system ──────────────────────────────────────────
 #
@@ -198,8 +188,7 @@ function verify_t_cancels()
         uz = (2/3)*t^(-1) * Uξ
         # ∂/∂z(1/R) = -t^{-4/3} Sξ/S²
         dinvR_dz = -t^(-4/3) * Sξ / S^2
-        ut + u_val*uz - (-dinvR_dz)  # ut + u·uz + ∂/∂z(1/R) ... wait
-        # Correct PDE: ut + u·uz = -∂/∂z(1/R), so residual = ut + u·uz + ∂/∂z(1/R)
+        # PDE: ut + u·uz = -∂/∂z(1/R), residual = ut + u·uz + ∂/∂z(1/R)
         ut + u_val*uz + dinvR_dz
     end
 
