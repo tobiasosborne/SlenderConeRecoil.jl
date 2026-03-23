@@ -82,21 +82,21 @@ end
     slender_momentum_eq()
 
 Momentum equation in the 1D slender model (nondimensional, γ/ρ = 1):
-  ∂u/∂t + u·∂u/∂z = ∂/∂z (1/R)
+  ∂u/∂t + u·∂u/∂z = -∂/∂z(1/R) = Rz/R²
+
+(Derived from Bernoulli: φ_t + ½|∇φ|² + γκ/ρ = 0, differentiating in z.)
+Capillary pressure drives fluid AWAY from the tip (recoil).
 
 Returned as LHS - RHS (= 0):
-  ut + u·uz - ∂/∂z(1/R) = 0
-
-where ∂/∂z(1/R) = -Rz/R².
-So: ut + u·uz + Rz/R² = 0
+  ut + u·uz - Rz/R² = 0
 """
 function slender_momentum_eq()
     # LHS: ut + u*uz
     lhs = add(sym_ut, mul(sym_u, sym_uz))
-    # RHS: ∂/∂z(1/R) = -Rz/R²
-    # So LHS - RHS = ut + u*uz - (-Rz/R²) = ut + u*uz + Rz/R²
-    rhs_neg = mul(sym_Rz, pow(sym_R, Num(-2)))
-    add(lhs, rhs_neg)
+    # RHS: -∂/∂z(1/R) = Rz/R²
+    # LHS - RHS = ut + u*uz - Rz/R²
+    rhs = mul(sym_Rz, pow(sym_R, Num(-2)))
+    add(lhs, neg(rhs))
 end
 
 """

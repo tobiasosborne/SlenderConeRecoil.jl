@@ -46,9 +46,9 @@ include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
     end
 
     @testset "Momentum ODE: numerical evaluation" begin
-        # -(2/9)U + (4/9)(U - ξ)Uξ + Sξ/S² = 0
+        # -(2/9)U + (4/9)(U - ξ)Uξ - Sξ/S² = 0
         # U=0, ξ=0, Uξ=0, Sξ=0, S=1:
-        # 0 + 0 + 0 = 0
+        # 0 + 0 - 0 = 0
         mom = similarity_ode_momentum()
         result = substitute(mom,
             U => Num(0), ξ => Num(0), Uξ => Num(0),
@@ -56,11 +56,11 @@ include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
         @test result == Num(0)
 
         # U=9, ξ=0, Uξ=0, Sξ=-2, S=1:
-        # -(2/9)(9) + 0 + (-2)/1 = -2 - 2 = -4
+        # -(2/9)(9) + 0 - (-2)/1 = -2 + 2 = 0
         result2 = substitute(mom,
             U => Num(9), ξ => Num(0), Uξ => Num(0),
             Sξ => Num(-2), S => Num(1))
-        @test result2 == Num(-4)
+        @test result2 == Num(0)
     end
 
     @testset "Far-field consistency: S ~ εξ, U ~ (2/3)ξ" begin

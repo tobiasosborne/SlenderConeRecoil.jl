@@ -2,8 +2,8 @@
 # Types: Sym, Num, Add, Mul, Pow, Func
 # Operations: substitute, differentiate, pretty-print
 
-export Expr, Sym, Num, Add, Mul, Pow, Func
-export substitute, differentiate, walk
+export SExpr, Sym, Num, Add, Mul, Pow, Func
+export substitute, differentiate, walk, add, mul, pow, neg
 
 # ── Abstract type ──────────────────────────────────────────────────────
 abstract type SExpr end

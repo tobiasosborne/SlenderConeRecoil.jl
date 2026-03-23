@@ -72,10 +72,10 @@ include(joinpath(@__DIR__, "..", "src", "slender.jl"))
         @test mass_eval == Num(12)
 
         # Verify momentum equation by substituting ut=1, u=2, uz=3, Rz=4, R=1:
-        # 1 + 2*3 + 4/1² = 1 + 6 + 4 = 11
+        # ut + u*uz - Rz/R² = 1 + 6 - 4 = 3
         mom_eval = substitute(mom,
             ut => Num(1), u => Num(2), uz => Num(3),
             Rz => Num(4), R => Num(1))
-        @test mom_eval == Num(11)
+        @test mom_eval == Num(3)
     end
 end

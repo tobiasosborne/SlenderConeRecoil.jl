@@ -8,7 +8,7 @@
 #
 # The PDE system becomes an ODE system in (S(ξ), U(ξ)):
 #   2S(U - (2/3)ξ)S' + S²(U' - 2/3) = 0                [mass]
-#   (2/9)U + (U - (2/3)ξ)U' + S'/S² = 0                 [momentum]
+#   -(2/9)U + (4/9)(U - ξ)U' - S'/S² = 0                 [momentum]
 #   (replacing the notation: S' = dS/dξ, U' = dU/dξ)
 
 export similarity_ode_mass, similarity_ode_momentum, similarity_system
@@ -133,17 +133,18 @@ end
 """
     similarity_ode_momentum()
 
-Momentum ODE in similarity variables:
-  -(2/9)U + (4/9)(U - ξ)U' + S'/(S²) = 0
+Momentum ODE in similarity variables (correct sign from Bernoulli):
+  -(2/9)U + (4/9)(U - ξ)U' - S'/(S²) = 0
 
+The -S'/S² term represents capillary pressure driving recoil.
 Returns the LHS expression (= 0).
 """
 function similarity_ode_momentum()
-    # -(2/9)U + (4/9)(U - ξ)Uξ + Sξ/S² = 0
+    # -(2/9)U + (4/9)(U - ξ)Uξ - Sξ/S² = 0
     add(
         mul(Num(-2//9), sym_U),
         mul(Num(4//9), add(sym_U, neg(sym_ξ)), sym_Uξ),
-        mul(sym_Sξ, pow(sym_S, Num(-2)))
+        neg(mul(sym_Sξ, pow(sym_S, Num(-2))))
     )
 end
 
@@ -168,41 +169,50 @@ This is done numerically: evaluate the PDE residual at several values
 of t and check that the ratio is independent of t.
 """
 function verify_t_cancels()
-    # The 1D mass PDE: 2R·Rt + 2R·Rz·u + R²·uz = 0
-    # Substitute: R = t^{2/3}·S, u = (2/3)t^{-1/3}·U
-    #   Rt = (2/3)t^{-1/3}(S - ξS')
-    #   Rz = S'  (since ∂/∂z = t^{-2/3}∂/∂ξ, and S' is dS/dξ,
-    #            actually Rz = t^{2/3}·S'·t^{-2/3} = S')
-    #   uz = (2/3)t^{-1/3}·U'·t^{-2/3} = (2/3)t^{-1}·U'
+    # Numerically verify that the similarity substitution into the PDE
+    # gives a residual proportional to a power of t (i.e., t cancels
+    # from the ODE after division).
     #
-    # 2R·Rt = 2·t^{2/3}S·(2/3)t^{-1/3}(S - ξS')
-    #       = (4/3)t^{1/3}·S(S - ξS')
-    # 2R·Rz·u = 2·t^{2/3}S·S'·(2/3)t^{-1/3}U
-    #         = (4/3)t^{1/3}·SS'U
-    # R²·uz = t^{4/3}S²·(2/3)t^{-1}U'
-    #       = (2/3)t^{1/3}·S²U'
+    # Mass PDE residual = t^{1/3} · (2/3) · S · [mass ODE]
+    # Momentum PDE residual = t^{-4/3} · [momentum ODE expression]
     #
-    # Total: t^{1/3}·[(4/3)S(S-ξS') + (4/3)SS'U + (2/3)S²U']
-    #       = t^{1/3}·(2/3)·[2S(S-ξS') + 2SS'U + S²U']
-    #       = t^{1/3}·(2/3)·S·[2S - 2ξS' + 2S'U + SU']
-    #       = t^{1/3}·(2/3)·S·[mass ODE expression]
-    #
-    # So the mass ODE = 0 iff the PDE = 0, and t^{1/3} cancels. ✓
-    #
-    # Similarly for momentum, the common factor is t^{-4/3}. ✓
+    # So: (PDE residual at t₁) / (PDE residual at t₂) should equal
+    #     (t₁/t₂)^{power} for any (S, U, S', U', ξ).
 
-    # Numerical check: pick S=2, Sξ=0.5, U=1, Uξ=-0.3, ξ=1
-    # and evaluate mass ODE
-    vals = Dict(
-        sym_S => Num(2), sym_Sξ => Num(1//2),
-        sym_U => Num(1), sym_Uξ => Num(-3//10),
-        sym_ξ => Num(1)
-    )
-    mass_ode = similarity_ode_mass()
-    result = mass_ode
-    for (k, v) in vals
-        result = substitute(result, k, v)
+    S, Sξ, U, Uξ, ξ = 2.0, 0.5, 1.0, -0.3, 1.5
+
+    function mass_pde_residual(t)
+        # R = t^{2/3}S, Rt = (2/3)t^{-1/3}(S - ξSξ)
+        # Rz = Sξ, u = (2/3)t^{-1/3}U, uz = (2/3)t^{-1}Uξ
+        R = t^(2/3) * S
+        Rt = (2/3)*t^(-1/3) * (S - ξ*Sξ)
+        Rz = Sξ
+        u = (2/3)*t^(-1/3) * U
+        uz = (2/3)*t^(-1) * Uξ
+        2R*Rt + 2R*Rz*u + R^2*uz
     end
-    # The residual should be a pure number (no t dependence)
-    result isa Num
+
+    function mom_pde_residual(t)
+        u_val = (2/3)*t^(-1/3) * U
+        ut = -(2/9)*t^(-4/3) * (U + 2ξ*Uξ)
+        uz = (2/3)*t^(-1) * Uξ
+        # ∂/∂z(1/R) = -t^{-4/3} Sξ/S²
+        dinvR_dz = -t^(-4/3) * Sξ / S^2
+        ut + u_val*uz - (-dinvR_dz)  # ut + u·uz + ∂/∂z(1/R) ... wait
+        # Correct PDE: ut + u·uz = -∂/∂z(1/R), so residual = ut + u·uz + ∂/∂z(1/R)
+        ut + u_val*uz + dinvR_dz
+    end
+
+    t1, t2 = 1.0, 2.0
+    # Mass: residual ∝ t^{1/3}
+    r1 = mass_pde_residual(t1)
+    r2 = mass_pde_residual(t2)
+    mass_ok = abs(r1/r2 - (t1/t2)^(1/3)) < 1e-10
+
+    # Momentum: residual ∝ t^{-4/3}
+    r1m = mom_pde_residual(t1)
+    r2m = mom_pde_residual(t2)
+    mom_ok = abs(r1m/r2m - (t1/t2)^(-4/3)) < 1e-10
+
+    mass_ok && mom_ok
 end
