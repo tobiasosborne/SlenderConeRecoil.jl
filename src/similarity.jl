@@ -18,6 +18,8 @@ const sym_ξ = Sym(:ξ)
 const sym_S = Sym(:S)       # S(ξ) — similarity profile for R
 const sym_U = Sym(:U)       # U(ξ) — similarity profile for u
 const sym_Sξ = Sym(:Sξ)     # dS/dξ
+const sym_Sξξ = Sym(:Sξξ)   # d²S/dξ²
+const sym_Sξξξ = Sym(:Sξξξ) # d³S/dξ³
 const sym_Uξ = Sym(:Uξ)     # dU/dξ
 
 # ── Derivation of the similarity ODEs ──────────────────────────────────
@@ -121,21 +123,25 @@ function similarity_ode_mass()
 end
 
 """
-    similarity_ode_momentum()
+    similarity_ode_momentum(; axial=false)
 
-Momentum ODE in similarity variables (correct sign from Bernoulli):
-  -(2/9)U + (4/9)(U - ξ)U' - S'/(S²) = 0
+Momentum ODE in similarity variables.
 
-The -S'/S² term represents capillary pressure driving recoil.
-Returns the LHS expression (= 0).
+Leading order:  -(2/9)U + (4/9)(U - ξ)U' - S'/S² = 0
+With axial:     -(2/9)U + (4/9)(U - ξ)U' - S'/S² - S''' = 0
+
+The -S''' term produces capillary wave dispersion.
 """
-function similarity_ode_momentum()
-    # -(2/9)U + (4/9)(U - ξ)Uξ - Sξ/S² = 0
-    add(
+function similarity_ode_momentum(; axial::Bool=false)
+    expr = add(
         mul(Num(-2//9), sym_U),
         mul(Num(4//9), add(sym_U, neg(sym_ξ)), sym_Uξ),
         neg(mul(sym_Sξ, pow(sym_S, Num(-2))))
     )
+    if axial
+        expr = add(expr, neg(sym_Sξξξ))
+    end
+    expr
 end
 
 """

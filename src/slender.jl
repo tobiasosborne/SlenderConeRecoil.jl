@@ -19,6 +19,7 @@ const sym_R = Sym(:R)      # R(z,t) — free surface radius
 const sym_u = Sym(:u)      # u(z,t) — axial velocity
 const sym_Rz = Sym(:Rz)    # ∂R/∂z
 const sym_Rzz = Sym(:Rzz)  # ∂²R/∂z²
+const sym_Rzzz = Sym(:Rzzz) # ∂³R/∂z³
 const sym_Rt = Sym(:Rt)    # ∂R/∂t
 const sym_uz = Sym(:uz)    # ∂u/∂z
 const sym_ut = Sym(:ut)    # ∂u/∂t
@@ -79,24 +80,26 @@ function slender_mass_eq()
 end
 
 """
-    slender_momentum_eq()
+    slender_momentum_eq(; axial=false)
 
-Momentum equation in the 1D slender model (nondimensional, γ/ρ = 1):
-  ∂u/∂t + u·∂u/∂z = -∂/∂z(1/R) = Rz/R²
+Momentum equation in the 1D slender model (nondimensional, γ/ρ = 1).
 
-(Derived from Bernoulli: φ_t + ½|∇φ|² + γκ/ρ = 0, differentiating in z.)
-Capillary pressure drives fluid AWAY from the tip (recoil).
+Leading order (axial=false):
+  κ = 1/R  →  ut + u·uz - Rz/R² = 0
 
-Returned as LHS - RHS (= 0):
-  ut + u·uz - Rz/R² = 0
+With axial curvature (axial=true):
+  κ = 1/R - Rzz  →  ut + u·uz - Rz/R² - Rzzz = 0
+
+The -Rzzz term is dispersive and produces capillary waves.
 """
-function slender_momentum_eq()
-    # LHS: ut + u*uz
+function slender_momentum_eq(; axial::Bool=false)
     lhs = add(sym_ut, mul(sym_u, sym_uz))
-    # RHS: -∂/∂z(1/R) = Rz/R²
-    # LHS - RHS = ut + u*uz - Rz/R²
     rhs = mul(sym_Rz, pow(sym_R, Num(-2)))
-    add(lhs, neg(rhs))
+    expr = add(lhs, neg(rhs))
+    if axial
+        expr = add(expr, neg(sym_Rzzz))
+    end
+    expr
 end
 
 """

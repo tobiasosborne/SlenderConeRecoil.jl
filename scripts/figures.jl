@@ -222,8 +222,8 @@ end
 
 # ── Run all ────────────────────────────────────────────────────────────
 println("Generating figures for SlenderConeRecoil...")
-println("Solving inner BVP (2D Newton)...")
-sol = solve_inner_bvp(ξ₀=2.5, S₀=0.5, ξ_max=100.0, ε=0.1)
+println("Solving inner BVP (3D Newton with axial curvature)...")
+sol = solve_inner_bvp(ε=0.1)
 println("  Converged: ξ₀=$(round(sol.ξ₀, digits=3)), S₀=$(round(sol.S₀, digits=4))")
 println()
 

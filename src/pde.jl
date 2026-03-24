@@ -64,34 +64,37 @@ end
 
 # ── PDE right-hand side ───────────────────────────────────────────────
 """
-The 1D slender model in primitive variables (R, u):
-  Rt = -u·Rz - (R/2)·uz          [from mass, dividing by 2R]
-  ut = -u·uz - ∂/∂z(1/R)         [momentum, correct sign]
-     = -u·uz + Rz/R²
+The 1D slender model with axial curvature, in primitive variables (R, u):
+  Rt = -u·Rz - (R/2)·uz                    [mass]
+  ut = -u·uz + Rz/R² + Rzzz                [momentum with κ = 1/R - Rzz]
+
+The Rzzz term is dispersive and produces capillary waves.
 """
 function pde_rhs!(dw, w, p, t)
-    N, z, Rz_buf, uz_buf, invR_z_buf, invR_buf = p
+    N, z, Rz_buf, uz_buf, invR_z_buf, invR_buf, Rzz_buf, Rzzz_buf = p
     R_orig = @view w[1:N]
     u_orig = @view w[N+1:2N]
     dR = @view dw[1:N]
     du = @view dw[N+1:2N]
 
-    # Use R directly (no clamping needed if IC is positive and solver is stable)
-
     # Compute spatial derivatives
     ddz!(Rz_buf, R_orig, z)
     ddz!(uz_buf, u_orig, z)
 
-    # Compute ∂/∂z(1/R) — no allocation
+    # ∂/∂z(1/R)
     invR_buf .= 1.0 ./ R_orig
     ddz!(invR_z_buf, invR_buf, z)
 
+    # Rzzz = d³R/dz³ (apply ddz! three times)
+    ddz!(Rzz_buf, Rz_buf, z)
+    ddz!(Rzzz_buf, Rzz_buf, z)
+
     for i in 1:N
         dR[i] = -u_orig[i] * Rz_buf[i] - 0.5 * R_orig[i] * uz_buf[i]
-        du[i] = -u_orig[i] * uz_buf[i] - invR_z_buf[i]  # correct sign: -∂/∂z(1/R) = Rz/R²
+        du[i] = -u_orig[i] * uz_buf[i] - invR_z_buf[i] + Rzzz_buf[i]
     end
 
-    # Left BC at truncated tip: u = 0, R fixed (no unphysical shrinkage)
+    # Left BC: u = 0, R fixed, Rzzz = 0 (symmetry)
     du[1] = 0.0
     dR[1] = 0.0
 
@@ -122,8 +125,10 @@ function solve_pde(; ε::Float64=0.1, N::Int=200, z_min::Float64=0.01,
     uz_buf = zeros(N)
     invR_z_buf = zeros(N)
     invR_buf = zeros(N)
+    Rzz_buf = zeros(N)
+    Rzzz_buf = zeros(N)
 
-    p = (N, z, Rz_buf, uz_buf, invR_z_buf, invR_buf)
+    p = (N, z, Rz_buf, uz_buf, invR_z_buf, invR_buf, Rzz_buf, Rzzz_buf)
     tspan = (0.0, t_end)
 
     # Save at specified times
