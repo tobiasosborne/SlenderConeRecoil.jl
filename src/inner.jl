@@ -5,14 +5,14 @@
 #   -(2/9)U + (4/9)(U - ξ)U' - S'/S² = 0    [momentum]
 #
 # Solved as an IVP by shooting from the tip ξ₀:
-#   BCs at tip: S'(ξ₀) = 0 (smooth rounded tip),
-#               S(ξ₀) > 0 (finite radius)
-#   Far-field: S(ξ) ~ εξ as ξ → ∞
+#   BCs at tip: S'(ξ₀) = 0 (smooth rounded tip), S(ξ₀) = S₀ > 0
+#   Far-field: S(ξ)/ξ → ε, U(ξ) → 0 as ξ → ∞
 #
-# Shooting parameters: (ξ₀, S₀) where S₀ = S(ξ₀).
-# From S'(ξ₀) = 0 and the ODEs, we can derive U(ξ₀) and U'(ξ₀).
+# Two free parameters (ξ₀, S₀) determined by two far-field conditions.
+# The tip position ξ₀ > 0 represents the recoil distance.
 
 using DifferentialEquations
+using LinearAlgebra: norm, det
 
 export solve_inner_bvp, InnerSolution
 
@@ -26,20 +26,11 @@ end
 
 # ── ODE right-hand side ────────────────────────────────────────────────
 """
-Resolve the similarity ODEs for (S', U') given (S, U) at ξ.
-
-From mass:      U' = -2 - 2S'(U-ξ)/S
-From momentum:  S'/S² = -(2/9)U + (4/9)(U-ξ)U'   [note: sign flip vs wrong version]
-                S' = S²[-(2/9)U + (4/9)(U-ξ)U']
-
-Substitute mass into momentum:
-  S' = S²[-(2/9)U + (4/9)(U-ξ)(-2 - 2S'(U-ξ)/S)]
-  S' = S²[-(2/9)U - (8/9)(U-ξ) - (8/9)(U-ξ)²S'/S]
-  S' + (8/9)S(U-ξ)²S' = S²[-(2/9)U - (8/9)(U-ξ)]
-  S'[1 + (8/9)S(U-ξ)²] = -S²[(2/9)U + (8/9)(U-ξ)]
+Resolved similarity ODEs:
   S' = -S²[(2/9)U + (8/9)(U-ξ)] / [1 + (8/9)S(U-ξ)²]
+  U' = -2 - 2S'(U-ξ)/S
 
-Note: denominator 1 + (8/9)S(U-ξ)² > 0 always (no finite-ξ singularity).
+Denominator 1 + (8/9)S(U-ξ)² > 0 always (no singularity).
 """
 function inner_rhs!(du, u, p, ξ)
     S, U = u
@@ -49,11 +40,9 @@ function inner_rhs!(du, u, p, ξ)
         return
     end
 
-    v = U - ξ  # velocity in similarity frame
-
-    # S' from resolved system (correct sign)
+    v = U - ξ
     numer = -S^2 * (2/9 * U + 8/9 * v)
-    denom = 1 + 8/9 * S * v^2    # always positive
+    denom = 1 + 8/9 * S * v^2
 
     Sξ = numer / denom
     Uξ = -2 - 2 * Sξ * v / S
@@ -64,92 +53,68 @@ end
 
 # ── Initial conditions at the tip ──────────────────────────────────────
 """
-    tip_initial_conditions(ξ₀, S₀)
-
-Compute (S, U) at the tip ξ = ξ₀.
-At the tip: S'(ξ₀) = 0 (symmetry).
-
-From mass with S' = 0:   2S + S·U' = 0  →  U' = -2
-From momentum with S' = 0:
-  -(2/9)U + (4/9)(U - ξ₀)(-2) = 0
-  -(2/9)U - (8/9)(U - ξ₀) = 0
-  -(10/9)U + (8/9)ξ₀ = 0
-  U = (4/5)ξ₀
+At tip ξ₀: S'(ξ₀) = 0.
+Mass → U' = -2. Momentum → U = (4/5)ξ₀.
 """
 function tip_initial_conditions(ξ₀::Float64, S₀::Float64)
     U₀ = 4/5 * ξ₀
     (S₀, U₀)
 end
 
-# ── Shooting solver with Newton iteration ──────────────────────────────
+# ── Single-shot integration ───────────────────────────────────────────
+function _shoot(ξ₀, S₀, ξ_max)
+    S₀_val, U₀_val = tip_initial_conditions(ξ₀, S₀)
+    prob = ODEProblem(inner_rhs!, [S₀_val, U₀_val], (ξ₀ + 1e-6, ξ_max))
+    sol = solve(prob, Tsit5(); reltol=1e-11, abstol=1e-13, maxiters=2_000_000)
+    ξ_vals = sol.t
+    S_vals = [sol.u[i][1] for i in eachindex(sol.u)]
+    U_vals = [sol.u[i][2] for i in eachindex(sol.u)]
+    (ξ_vals, S_vals, U_vals)
+end
+
+# ── 2D Newton shooting ────────────────────────────────────────────────
 """
-    solve_inner_bvp(; ξ₀=0.0, S₀=1.0, ξ_max=50.0, ε=0.1,
-                      newton_iters=20, newton_tol=1e-8)
+    solve_inner_bvp(; ξ₀=2.5, S₀=0.5, ξ_max=100.0, ε=0.1,
+                      newton_iters=30, newton_tol=1e-6)
 
-Solve the inner problem by shooting from the tip with Newton iteration
-on S₀ to match the far-field condition S(ξ)/ξ → ε.
+Solve the inner BVP by 2D Newton shooting over (ξ₀, S₀) matching:
+  1. S(ξ_max)/ξ_max → ε   (far-field slope)
+  2. U(ξ_max) → 0          (far-field velocity)
 
-Parameters:
-- ξ₀: tip position
-- S₀: initial guess for tip radius S(ξ₀)
-- ξ_max: integration endpoint
-- ε: cone half-angle (far-field target S ~ εξ)
-- newton_iters: max Newton iterations for shooting
-- newton_tol: convergence tolerance
-
-Returns an InnerSolution.
+The tip position ξ₀ > 0 represents how far the tip has recoiled.
 """
-function solve_inner_bvp(; ξ₀::Float64=0.0, S₀::Float64=1.0,
-                           ξ_max::Float64=50.0, ε::Float64=0.1,
-                           newton_iters::Int=20, newton_tol::Float64=1e-8)
-    function shoot(S₀_trial)
-        S_val, U_val = tip_initial_conditions(ξ₀, S₀_trial)
-        u0 = [S_val, U_val]
-        tspan = (ξ₀ + 1e-6, ξ_max)
-        prob = ODEProblem(inner_rhs!, u0, tspan)
-        sol = solve(prob, Tsit5(); reltol=1e-10, abstol=1e-12,
-                    maxiters=1_000_000)
-        ξ_vals = sol.t
-        S_vals = [sol.u[i][1] for i in eachindex(sol.u)]
-        U_vals = [sol.u[i][2] for i in eachindex(sol.u)]
-        # Far-field slope: S(ξ_end)/ξ_end should approach ε
-        slope = S_vals[end] / ξ_vals[end]
-        (ξ_vals, S_vals, U_vals, slope)
+function solve_inner_bvp(; ξ₀::Float64=2.5, S₀::Float64=0.5,
+                           ξ_max::Float64=100.0, ε::Float64=0.1,
+                           newton_iters::Int=30, newton_tol::Float64=1e-6)
+    function residual(x)
+        ξv, Sv, Uv = _shoot(x[1], x[2], ξ_max)
+        [Sv[end] / ξv[end] - ε, Uv[end]]
     end
 
-    # Newton iteration on S₀ to match far-field slope = ε
-    S₀_curr = S₀
-    δ = 1e-6
-    for iter in 1:newton_iters
-        ξv, Sv, Uv, slope = shoot(S₀_curr)
-        residual = slope - ε
-        if abs(residual) < newton_tol
-            return InnerSolution(ξv, Sv, Uv, ξ₀, S₀_curr)
-        end
-        # Finite difference Jacobian
-        _, _, _, slope_p = shoot(S₀_curr + δ)
-        dres_dS₀ = (slope_p - slope) / δ
-        if abs(dres_dS₀) < 1e-15
-            break
-        end
-        S₀_curr -= residual / dres_dS₀
-        if S₀_curr ≤ 0
-            S₀_curr = δ  # keep positive
-        end
+    x = [ξ₀, S₀]
+    δ = 1e-5
+
+    for _ in 1:newton_iters
+        F = residual(x)
+        norm(F) < newton_tol && break
+
+        # Finite-difference Jacobian
+        F_d1 = residual(x .+ [δ, 0])
+        F_d2 = residual(x .+ [0, δ])
+        J = hcat((F_d1 - F)/δ, (F_d2 - F)/δ)
+        abs(det(J)) < 1e-20 && break
+
+        step = J \ F
+        x .-= step
+        x[1] = max(0.01, x[1])
+        x[2] = max(0.01, x[2])
     end
 
-    # Return best solution even if Newton didn't converge
-    ξv, Sv, Uv, _ = shoot(S₀_curr)
-    InnerSolution(ξv, Sv, Uv, ξ₀, S₀_curr)
+    ξv, Sv, Uv = _shoot(x[1], x[2], ξ_max)
+    InnerSolution(ξv, Sv, Uv, x[1], x[2])
 end
 
 # ── Far-field diagnostics ──────────────────────────────────────────────
-"""
-    far_field_slope(sol::InnerSolution)
-
-Compute S(ξ)/ξ at the last few points. For a correct solution,
-this should approach ε.
-"""
 function far_field_slope(sol::InnerSolution)
     n = length(sol.ξ)
     idx = max(1, n-10):n

@@ -18,8 +18,7 @@ include(joinpath(@__DIR__, "..", "src", "inner.jl"))
         @test U₀ ≈ 4.0
     end
 
-    @testset "ODE RHS: no singularity (correct denominator)" begin
-        # With correct sign, denom = 1 + (8/9)S·v² > 0 always
+    @testset "ODE RHS: no singularity" begin
         du = zeros(2)
         for ξ in [0.0, 0.5, 1.0, 5.0, 10.0]
             inner_rhs!(du, [1.0, 0.0], nothing, ξ + 1e-6)
@@ -28,32 +27,30 @@ include(joinpath(@__DIR__, "..", "src", "inner.jl"))
     end
 
     @testset "Integration reaches far field" begin
-        sol = solve_inner_bvp(ξ₀=0.0, S₀=1.0, ξ_max=50.0, ε=0.1,
-                              newton_iters=0)  # no Newton, just raw integration
-        @test sol isa InnerSolution
-        # With correct signs, should reach ξ_max without blowup
-        @test sol.ξ[end] ≈ 50.0 atol=1.0
-        @test all(isfinite, sol.S)
-        @test all(isfinite, sol.U)
+        ξv, Sv, Uv = _shoot(2.5, 0.5, 50.0)
+        @test ξv[end] ≈ 50.0 atol=1.0
+        @test all(isfinite, Sv)
+        @test all(isfinite, Uv)
     end
 
-    @testset "Solution positivity" begin
-        sol = solve_inner_bvp(ξ₀=0.0, S₀=1.0, ξ_max=20.0, ε=0.1,
-                              newton_iters=0)
-        @test all(s -> s > 0, sol.S)
-    end
+    @testset "2D Newton converges: both slope and U match" begin
+        sol = solve_inner_bvp(ξ₀=2.5, S₀=0.5, ξ_max=100.0, ε=0.1)
+        @test sol.ξ₀ > 0  # tip has recoiled
+        @test sol.S₀ > 0  # positive tip radius
 
-    @testset "Newton shooting converges" begin
-        sol = solve_inner_bvp(ξ₀=0.0, S₀=1.0, ξ_max=50.0, ε=0.1)
+        # Far-field slope matches ε
         slopes = far_field_slope(sol)
-        @test length(slopes) > 0
-        # After Newton iteration, far-field slope should match ε closely
         @test abs(slopes[end] - 0.1) < 0.001
+
+        # Far-field U → 0
+        @test abs(sol.U[end]) < 0.01
+
+        # Blob: S₀ > ε·ξ₀ (tip is wider than undisturbed cone)
+        @test sol.S₀ > 0.1 * sol.ξ₀
     end
 
     @testset "ODE residual along solution" begin
-        sol = solve_inner_bvp(ξ₀=0.0, S₀=1.0, ξ_max=20.0, ε=0.1,
-                              newton_iters=0)
+        sol = solve_inner_bvp(ξ₀=2.5, S₀=0.5, ξ_max=50.0, ε=0.1)
         n = length(sol.ξ)
         mid = div(n, 2)
         if mid > 1 && mid < n
@@ -61,11 +58,9 @@ include(joinpath(@__DIR__, "..", "src", "inner.jl"))
             Sξ_fd = (sol.S[mid+1] - sol.S[mid-1]) / (sol.ξ[mid+1] - sol.ξ[mid-1])
             Uξ_fd = (sol.U[mid+1] - sol.U[mid-1]) / (sol.ξ[mid+1] - sol.ξ[mid-1])
 
-            # Mass: 2S + 2Sξ(U-ξ) + S·Uξ
             mass_res = 2*Sm + 2*Sξ_fd*(Um - ξm) + Sm*Uξ_fd
             @test abs(mass_res) < 0.1
 
-            # Momentum (correct sign): -(2/9)U + (4/9)(U-ξ)Uξ - Sξ/S²
             mom_res = -(2/9)*Um + (4/9)*(Um-ξm)*Uξ_fd - Sξ_fd/Sm^2
             @test abs(mom_res) < 0.1
         end
