@@ -8,10 +8,6 @@ include(joinpath(@__DIR__, "..", "src", "slender.jl"))
     @testset "Curvature expressions" begin
         κ_full = curvature_full()
         @test κ_full isa SExpr
-        # Full curvature should involve R, Rz, Rzz
-        s = string(κ_full)
-        @test occursin("R", s)
-
         κ_lead = curvature_leading()
         # 1/R = R^{-1}
         @test κ_lead == pow(Sym(:R), Num(-1))
@@ -20,21 +16,36 @@ include(joinpath(@__DIR__, "..", "src", "slender.jl"))
     @testset "Mass conservation equation" begin
         eq = slender_mass_eq()
         @test eq isa SExpr
-        s = string(eq)
-        # Should contain R, Rt, Rz, u, uz
-        @test occursin("R", s)
-        @test occursin("Rt", s)
-        @test occursin("uz", s)
+        R = Sym(:R); Rt = Sym(:Rt); Rz = Sym(:Rz)
+        u = Sym(:u); uz = Sym(:uz)
+        # 2R·Rt + 2R·Rz·u + R²·uz at R=3,Rt=2,Rz=1,u=4,uz=5:
+        # 2(3)(2) + 2(3)(1)(4) + 9(5) = 12 + 24 + 45 = 81
+        result = substitute(eq, R => Num(3), Rt => Num(2), Rz => Num(1),
+                            u => Num(4), uz => Num(5))
+        @test result == Num(81)
     end
 
     @testset "Momentum equation" begin
         eq = slender_momentum_eq()
         @test eq isa SExpr
-        s = string(eq)
-        # Should contain ut, u, uz, Rz, R
-        @test occursin("ut", s)
-        @test occursin("uz", s)
-        @test occursin("Rz", s)
+        ut = Sym(:ut); u = Sym(:u); uz = Sym(:uz)
+        Rz = Sym(:Rz); R = Sym(:R)
+        # ut + u·uz - Rz/R² at ut=1,u=2,uz=3,Rz=8,R=2: 1+6-8/4 = 5
+        result = substitute(eq, ut => Num(1), u => Num(2), uz => Num(3),
+                            Rz => Num(8), R => Num(2))
+        @test result == Num(5)
+    end
+
+    @testset "Momentum equation with axial curvature" begin
+        eq = slender_momentum_eq(axial=true)
+        @test eq isa SExpr
+        ut = Sym(:ut); u = Sym(:u); uz = Sym(:uz)
+        Rz = Sym(:Rz); R = Sym(:R); Rzzz = Sym(:Rzzz)
+        # ut + u·uz - Rz/R² - Rzzz at ut=1,u=2,uz=3,Rz=8,R=2,Rzzz=10:
+        # 1+6-2-10 = -5
+        result = substitute(eq, ut => Num(1), u => Num(2), uz => Num(3),
+                            Rz => Num(8), R => Num(2), Rzzz => Num(10))
+        @test result == Num(-5)
     end
 
     @testset "System tuple" begin

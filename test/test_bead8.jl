@@ -1,5 +1,4 @@
 using Test
-push!(LOAD_PATH, joinpath(@__DIR__, ".."))
 include(joinpath(@__DIR__, "..", "src", "expr.jl"))
 include(joinpath(@__DIR__, "..", "src", "series.jl"))
 include(joinpath(@__DIR__, "..", "src", "slender.jl"))
@@ -22,15 +21,26 @@ include(joinpath(@__DIR__, "..", "src", "pde.jl"))
         @test z[2] - z[1] < z[end] - z[end-1]
     end
 
-    @testset "Finite differences" begin
+    @testset "Finite differences (uniform grid)" begin
         # Test ddz! on f(z) = z² → f'(z) = 2z
         z = collect(range(0.0, 5.0, length=50))
         f = z .^ 2
         df = zeros(50)
         ddz!(df, f, z)
-        # Check interior points
         for i in 5:45
             @test abs(df[i] - 2*z[i]) < 0.01
+        end
+    end
+
+    @testset "Finite differences (stretched grid, sin)" begin
+        # Test ddz! on f(z) = sin(z) on a non-uniform stretched grid
+        z = stretched_grid(100, 0.1, 5.0)
+        f = sin.(z)
+        df = zeros(100)
+        ddz!(df, f, z)
+        # Interior points: should match cos(z) to 2nd order
+        for i in 5:95
+            @test abs(df[i] - cos(z[i])) < 0.01
         end
     end
 

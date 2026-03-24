@@ -13,6 +13,7 @@ include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
 include(joinpath(@__DIR__, "..", "src", "inner.jl"))
 include(joinpath(@__DIR__, "..", "src", "outer.jl"))
 include(joinpath(@__DIR__, "..", "src", "composite.jl"))
+include(joinpath(@__DIR__, "..", "src", "outer_hierarchy.jl"))
 include(joinpath(@__DIR__, "..", "src", "pde.jl"))
 
 FIGDIR = joinpath(@__DIR__, "..", "figures")
@@ -220,6 +221,98 @@ function figure5(sol)
     println("  Saved.")
 end
 
+# ── Figure 6: Matched asymptotic — tip to body ──────────────────────────
+function figure6(inner_sol)
+    println("Figure 6: Matched asymptotic (tip to body)...")
+    ε = 0.1; ξ₀ = inner_sol.ξ₀; S₀ = inner_sol.S₀
+    ξ_match = 15.0
+
+    # CAS-derived equations (verify hierarchy structure)
+    println("  CAS: deriving outer hierarchy...")
+    eqs = derive_outer_equations(order=5)
+    println("  Orders with nonzero terms: ", sort(collect(keys(eqs))))
+
+    # Solve both: linearised (first-order) and full nonlinear (all orders)
+    println("  Solving linearised outer...")
+    outer_lin = solve_outer_linearised(inner_sol, ξ_match=ξ_match, ξ_max=80.0)
+    println("  Solving full nonlinear outer...")
+    outer_full = solve_outer_full(inner_sol, ξ_match=ξ_match, ξ_max=80.0)
+
+    # Build composite: inner for ξ < ξ_match, full outer for ξ > ξ_match
+    ξ_all = range(ξ₀, 80.0, length=1000) |> collect
+    S_comp = zeros(length(ξ_all))
+    blend_lo, blend_hi = ξ_match - 2.0, ξ_match + 2.0
+
+    for (i, ξ) in enumerate(ξ_all)
+        Si = _interp_scalar(inner_sol.ξ, inner_sol.S, ξ)
+        So = ξ < outer_full.ξ[1] ? ε * ξ :
+             _interp_scalar(outer_full.ξ, outer_full.S, ξ)
+        if ξ ≤ blend_lo;      S_comp[i] = Si
+        elseif ξ ≥ blend_hi;  S_comp[i] = So
+        else w = (ξ - blend_lo)/(blend_hi - blend_lo)
+             S_comp[i] = (1-w)*Si + w*So
+        end
+    end
+
+    # Hemispherical cap
+    θ_cap = range(0, π/2, length=50)
+    ξ_cap = ξ₀ .- S₀ .* cos.(θ_cap)
+    S_cap = S₀ .* sin.(θ_cap)
+    ξ_full = vcat(ξ_cap, ξ_all)
+    S_full = vcat(S_cap, S_comp)
+
+    # ── Main plot: S(ξ) tip to body ──
+    p = plot(xlabel="ξ", ylabel="S(ξ)",
+             title="Matched asymptotic: tip to body (ε=$ε)",
+             size=(900, 500), legend=:topleft)
+
+    ξ_ref = range(0, 80, length=200)
+    plot!(p, ξ_ref, ε .* collect(ξ_ref), label="εξ (undisturbed cone)",
+          color=:gray, linestyle=:dash, linewidth=1, alpha=0.6)
+
+    idx_in = inner_sol.ξ .≤ ξ_match + 5
+    plot!(p, inner_sol.ξ[idx_in], inner_sol.S[idx_in],
+          label="Inner (nonlinear BVP)", color=:blue, linewidth=2, alpha=0.4)
+    plot!(p, outer_lin.ξ, outer_lin.S,
+          label="Outer O(ε³) linearised", color=:red, linewidth=1.5,
+          alpha=0.4, linestyle=:dash)
+    plot!(p, outer_full.ξ, outer_full.S,
+          label="Outer (full nonlinear)", color=:orange, linewidth=2,
+          alpha=0.5, linestyle=:dashdot)
+    plot!(p, ξ_full, S_full, label="Composite (tip → body)",
+          color=:black, linewidth=2.5)
+
+    vspan!(p, [blend_lo, blend_hi], label="blend", fillcolor=:yellow, alpha=0.1)
+    scatter!(p, [ξ₀], [S₀], label="tip (ξ₀=$(round(ξ₀,digits=2)))",
+             color=:red, markersize=5, markerstrokewidth=0)
+
+    xlims!(p, ξ₀ - S₀ - 0.3, 50); ylims!(p, 0, 5.5)
+    savefig(p, joinpath(FIGDIR, "fig6_matched_asymptotic.pdf"))
+    println("  Saved.")
+
+    # ── Excess plot: linearised vs full nonlinear ──
+    p2 = plot(xlabel="ξ", ylabel="S(ξ) − εξ",
+              title="Linearised O(ε³) vs full nonlinear outer (ε=$ε)",
+              size=(900, 450), legend=:topright)
+    hline!(p2, [0], label="", color=:gray, linestyle=:dash, alpha=0.5)
+
+    inner_exc = inner_sol.S .- ε .* inner_sol.ξ
+    plot!(p2, inner_sol.ξ[idx_in], inner_exc[idx_in],
+          label="Inner", color=:blue, linewidth=2)
+    plot!(p2, outer_lin.ξ, outer_lin.S .- ε .* outer_lin.ξ,
+          label="Outer O(ε³)", color=:red, linewidth=2, linestyle=:dash)
+    plot!(p2, outer_full.ξ, outer_full.S .- ε .* outer_full.ξ,
+          label="Outer (full nonlinear)", color=:orange, linewidth=2.5)
+    plot!(p2, ξ_all, S_comp .- ε .* ξ_all,
+          label="Composite", color=:black, linewidth=2.5)
+
+    vline!(p2, [ξ₀], label="", color=:black, linestyle=:dot, alpha=0.3)
+    vspan!(p2, [blend_lo, blend_hi], label="", fillcolor=:yellow, alpha=0.1)
+    xlims!(p2, ξ₀ - 0.5, 50)
+    savefig(p2, joinpath(FIGDIR, "fig6_matched_excess.pdf"))
+    println("  Saved (excess plot).")
+end
+
 # ── Run all ────────────────────────────────────────────────────────────
 println("Generating figures for SlenderConeRecoil...")
 println("Solving inner BVP (3D Newton with axial curvature)...")
@@ -232,4 +325,5 @@ figure2(sol)
 figure3(sol)
 figure4(sol)
 figure5(sol)
+figure6(sol)
 println("\nAll figures saved to figures/")

@@ -46,21 +46,34 @@ include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
     end
 
     @testset "Momentum ODE: numerical evaluation" begin
-        # -(2/9)U + (4/9)(U - ξ)Uξ - Sξ/S² = 0
-        # U=0, ξ=0, Uξ=0, Sξ=0, S=1:
-        # 0 + 0 - 0 = 0
         mom = similarity_ode_momentum()
-        result = substitute(mom,
-            U => Num(0), ξ => Num(0), Uξ => Num(0),
-            Sξ => Num(0), S => Num(1))
-        @test result == Num(0)
-
         # U=9, ξ=0, Uξ=0, Sξ=-2, S=1:
         # -(2/9)(9) + 0 - (-2)/1 = -2 + 2 = 0
-        result2 = substitute(mom,
+        result = substitute(mom,
             U => Num(9), ξ => Num(0), Uξ => Num(0),
             Sξ => Num(-2), S => Num(1))
-        @test result2 == Num(0)
+        @test result == Num(0)
+
+        # Non-trivial test with all terms nonzero:
+        # U=3, ξ=1, Uξ=6, Sξ=2, S=2:
+        # -(2/9)(3) + (4/9)(3-1)(6) - 2/4
+        # = -6/9 + 48/9 - 1/2 = 42/9 - 1/2 = 14/3 - 1/2 = 25/6
+        result2 = substitute(mom,
+            U => Num(3), ξ => Num(1), Uξ => Num(6),
+            Sξ => Num(2), S => Num(2))
+        @test result2 == Num(25//6)
+    end
+
+    @testset "Momentum ODE with axial curvature" begin
+        mom_ax = similarity_ode_momentum(axial=true)
+        Sξξξ = Sym(:Sξξξ)
+        # Same as above plus -S''' term:
+        # U=3, ξ=1, Uξ=6, Sξ=2, S=2, Sξξξ=1:
+        # 25/6 - 1 = 19/6
+        result = substitute(mom_ax,
+            U => Num(3), ξ => Num(1), Uξ => Num(6),
+            Sξ => Num(2), S => Num(2), Sξξξ => Num(1))
+        @test result == Num(19//6)
     end
 
     @testset "Far-field consistency: S ~ εξ, U ~ (2/3)ξ" begin

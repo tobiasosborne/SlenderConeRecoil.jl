@@ -68,19 +68,16 @@ function composite_solution(inner::InnerSolution, outer::OuterSolution;
         ξ_grid = range(ξ_min, ξ_max, length=n_points) |> collect
     end
 
-    # Get inner far-field asymptotic form
-    ξ_match = (ξ_min + ξ_max) / 2  # midpoint of overlap
-    slope, intercept = inner_far_field(inner, ξ_match)
-
     # Interpolate solutions onto common grid
     S_inner_interp = _interp(inner.ξ, inner.S, ξ_grid)
     U_inner_interp = _interp(inner.ξ, inner.U, ξ_grid)
     S_outer_interp = [ε * ξ + _interp_scalar(outer.ξ, outer.s₁, ξ) for ξ in ξ_grid]
     U_outer_interp = _interp(outer.ξ, outer.u₁, ξ_grid)
 
-    # Overlap: the common asymptotic form
-    S_overlap = [slope * ξ + intercept for ξ in ξ_grid]
-    U_overlap = zeros(length(ξ_grid))  # U → 0 in the far field of inner
+    # Overlap: the known analytical common part (unperturbed cone)
+    # Both inner far-field and outer base state approach S = εξ, U = 0
+    S_overlap = [ε * ξ for ξ in ξ_grid]
+    U_overlap = zeros(length(ξ_grid))
 
     # Additive composite
     S_comp = S_inner_interp .+ S_outer_interp .- S_overlap

@@ -11,7 +11,7 @@ An axisymmetric body of inviscid fluid (density ρ, surface tension γ) occupies
 For ε ≪ 1, the full 3D Euler equations reduce to a 1D system for the cross-sectional radius R(z,t) and axial velocity u(z,t):
 
     ∂(R²)/∂t + ∂(R²u)/∂z = 0        (mass)
-    ∂u/∂t + u ∂u/∂z = ∂/∂z(1/R)     (momentum, nondimensional γ/ρ=1)
+    ∂u/∂t + u ∂u/∂z = -∂/∂z(1/R)    (momentum, nondimensional γ/ρ=1)
 
 The curvature is dominated by the azimuthal term 1/R at leading order.
 
@@ -20,7 +20,7 @@ The curvature is dominated by the azimuthal term 1/R at leading order.
 With no imposed length scale, the Keller-Miksis scaling ℓ(t) = t^{2/3} applies. Setting z = ℓξ, R = ℓS(ξ), u = ℓ̇U(ξ) reduces the PDE to ODEs:
 
     2S + 2S'(U - ξ) + SU' = 0                    (mass)
-    -(2/9)U + (4/9)(U - ξ)U' + S'/S² = 0         (momentum)
+    -(2/9)U + (4/9)(U - ξ)U' - S'/S² - S''' = 0  (momentum, with axial curvature)
 
 ### 3. Inner solution (`src/inner.jl`)
 
@@ -36,7 +36,7 @@ Additive composite: S_comp = S_inner + S_outer - S_overlap, where S_overlap is t
 
 ### 6. Verification (`src/pde.jl`)
 
-The full 1D PDE is solved by method of lines (4th-order FD in space, Tsit5 in time). At late times, rescaling to similarity variables R/t^{2/3} vs z/t^{2/3} should collapse onto the similarity solution.
+The full 1D PDE is solved by method of lines (2nd-order FD on a non-uniform stretched grid, FBDF implicit time integration). At late times, rescaling to similarity variables R/t^{2/3} vs z/t^{2/3} should collapse onto the similarity solution.
 
 ## How to run
 

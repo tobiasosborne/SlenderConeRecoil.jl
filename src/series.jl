@@ -74,6 +74,11 @@ function _expand_negative_pow(base::SExpr, n::Int, ε::Sym, order::Int)::SExpr
     a0 = collect_order(base, ε, 0)
     δ = add(base, neg(a0))  # base - a0 = O(ε) part
 
+    # If base is ε-independent, δ = 0 and no expansion needed
+    if δ isa Num && iszero(δ.val)
+        return pow(a0, Num(-n))
+    end
+
     # (1 + δ/a₀)^{-n} via binomial series
     x = δ / a0  # this is O(ε)
     series = Num(1)

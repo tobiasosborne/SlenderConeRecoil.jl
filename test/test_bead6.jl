@@ -1,5 +1,4 @@
 using Test
-push!(LOAD_PATH, joinpath(@__DIR__, ".."))
 include(joinpath(@__DIR__, "..", "src", "expr.jl"))
 include(joinpath(@__DIR__, "..", "src", "series.jl"))
 include(joinpath(@__DIR__, "..", "src", "slender.jl"))
@@ -9,9 +8,9 @@ include(joinpath(@__DIR__, "..", "src", "outer.jl"))
 @testset "Outer linearised problem" begin
 
     @testset "Zero perturbation is (nearly) steady" begin
-        # With s₁=0, u₁=0 at large ξ, the solution should stay near zero
+        # With seed=0 at large ξ, the solution should stay near zero
         # (the base state almost satisfies the equations far from the tip)
-        sol = solve_outer(ε=0.1, ξ_min=5.0, ξ_max=50.0, s₁_init=0.0, u₁_init=0.0)
+        sol = solve_outer(ε=0.1, ξ_min=5.0, ξ_max=50.0, seed=0.0)
         @test sol isa OuterSolution
         @test length(sol.ξ) > 5
         @test all(isfinite, sol.s₁)
@@ -37,14 +36,26 @@ include(joinpath(@__DIR__, "..", "src", "outer.jl"))
 
     @testset "Perturbation bounded at moderate ξ" begin
         sol = solve_outer_driven(ε=0.1, ξ_min=5.0, ξ_max=30.0)
-        # The perturbation should not blow up for moderate ξ range
-        @test maximum(abs.(sol.s₁)) < 1e6
-        @test maximum(abs.(sol.u₁)) < 1e6
+        # The perturbation should remain moderate relative to base state εξ
+        @test maximum(abs.(sol.s₁)) < 100.0
+        @test maximum(abs.(sol.u₁)) < 100.0
     end
 
     @testset "ODE RHS evaluates cleanly" begin
-        dy = zeros(2)
-        outer_rhs!(dy, [0.01, 0.0], [0.1], 10.0)
+        dy = zeros(4)
+        outer_rhs!(dy, [0.01, 0.0, 0.0, 0.0], [0.1], 10.0)
         @test all(isfinite, dy)
+    end
+
+    @testset "Linearised mass equation consistency" begin
+        # At a point where s₁, s₁', u₁ are known, verify u₁' satisfies
+        # the linearised mass: 2s₁ + 2εu₁ - 2ξs₁' + εξu₁' = 0
+        ε = 0.1; ξ_test = 5.0
+        s₁ = 0.1; s₁p = 0.02; s₁pp = 0.0; u₁ = 0.05
+        dy = zeros(4)
+        outer_rhs!(dy, [s₁, s₁p, s₁pp, u₁], [ε], ξ_test)
+        u₁p = dy[4]
+        mass_res = 2*s₁ + 2*ε*u₁ - 2*ξ_test*s₁p + ε*ξ_test*u₁p
+        @test abs(mass_res) < 1e-12
     end
 end

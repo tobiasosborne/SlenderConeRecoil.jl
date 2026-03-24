@@ -5,7 +5,7 @@
 #   ∂u/∂t + u·∂u/∂z = -∂/∂z(1/R) = Rz/R²
 #
 # Spatial discretisation: 2nd-order finite differences on a stretched grid.
-# Time integration: Tsit5 from DifferentialEquations.jl.
+# Time integration: FBDF (implicit BDF) from DifferentialEquations.jl.
 # IC: R(z,0) = εz (undisturbed cone), u(z,0) = 0.
 # BC at z = L: outflow (zero-gradient).
 # BC at z = z_min: u = 0 (no flow through truncated tip), dR/dt from interior.

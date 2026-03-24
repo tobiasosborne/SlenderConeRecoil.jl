@@ -1,5 +1,4 @@
 using Test
-push!(LOAD_PATH, joinpath(@__DIR__, ".."))
 include(joinpath(@__DIR__, "..", "src", "expr.jl"))
 include(joinpath(@__DIR__, "..", "src", "series.jl"))
 include(joinpath(@__DIR__, "..", "src", "slender.jl"))
@@ -57,17 +56,23 @@ include(joinpath(@__DIR__, "..", "src", "inner.jl"))
             ξm = sol.ξ[mid]; Sm = sol.S[mid]; Um = sol.U[mid]
             Sξ_fd = (sol.S[mid+1] - sol.S[mid-1]) / (sol.ξ[mid+1] - sol.ξ[mid-1])
             Uξ_fd = (sol.U[mid+1] - sol.U[mid-1]) / (sol.ξ[mid+1] - sol.ξ[mid-1])
-            # S''' via second-order FD on S''
-            h = sol.ξ[mid+1] - sol.ξ[mid]
-            Sξξξ_fd = (sol.Sξξ[mid+1] - 2*sol.Sξξ[mid] + sol.Sξξ[mid-1]) / h^2
-            # This is actually d²(S'')/dξ², not S'''. Use first derivative of S'':
             Sξξξ_fd = (sol.Sξξ[mid+1] - sol.Sξξ[mid-1]) / (sol.ξ[mid+1] - sol.ξ[mid-1])
 
             mass_res = 2*Sm + 2*Sξ_fd*(Um - ξm) + Sm*Uξ_fd
-            @test abs(mass_res) < 0.5
+            @test abs(mass_res) < 0.1
 
             mom_res = -(2/9)*Um + (4/9)*(Um-ξm)*Uξ_fd - Sξ_fd/Sm^2 - Sξξξ_fd
-            @test abs(mom_res) < 0.5
+            @test abs(mom_res) < 0.1
         end
+    end
+
+    @testset "Momentum sign regression" begin
+        # The correct momentum drives flow AWAY from the tip (Rz/R² > 0 for a cone).
+        # Verify: at the tip, U > 0 (recoiling away) and U decreases toward far-field.
+        sol = solve_inner_bvp(ε=0.1)
+        # Tip velocity should be positive (recoil direction)
+        @test sol.U[1] > 0
+        # Far-field velocity should be near zero
+        @test abs(sol.U[end]) < 0.1
     end
 end

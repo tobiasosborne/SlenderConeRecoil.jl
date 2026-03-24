@@ -1,0 +1,115 @@
+# SlenderConeRecoil.jl
+
+A computational reproduction of Decent & King (2008): surface-tension-driven recoil of a slender fluid cone, solved via Keller--Miksis similarity scaling and matched asymptotic expansions.
+
+## Background
+
+I started a PhD in free boundary problems in fluid dynamics in the late 1990s. The first international conference I attended was the IUTAM Symposium on Free Surface Flows at the University of Birmingham, around 2000, organised by A. C. King and Y. D. Shikhmurzaev. I saw Andy King present the slender cone recoil problem -- modelling the conical tip of a fluid thread just after droplet pinch-off, driven by surface tension, solved via similarity methods and matched asymptotics. The inner nonlinear BVP producing a blob at the tip, the outer linearised capillary wave field, the matching -- it was one of the most impressive pieces of applied mathematics I had encountered. I switched my PhD to quantum computing in 2002, but the problem stayed with me for over two decades. This project is a computational reproduction of that work, made practical by AI-assisted coding with [Claude Code](https://claude.ai/claude-code).
+
+## The physics
+
+When a droplet pinches off from a liquid thread or jet, the remaining tip is approximately conical with small half-angle $\varepsilon$. Capillary pressure scales as $\gamma/R$, so it is large near the sharp tip and small far away. The resulting pressure gradient drives a recoil flow: the tip rounds off into a blob, and capillary waves propagate backward along the cone body.
+
+There is no imposed length scale. Dimensional analysis gives the Keller--Miksis self-similar scaling: all lengths grow as $\ell(t) = (\gamma t^2/\rho)^{1/3}$. Setting $z = \ell(t)\,\xi$, $R = \ell(t)\,S(\xi)$, $u = \dot\ell(t)\,U(\xi)$ reduces the time-dependent PDE to an ODE system in the similarity variable $\xi$.
+
+The small cone angle $\varepsilon \ll 1$ provides a second simplification. Near the tip (the inner region), the full nonlinear similarity ODEs are solved as a boundary-value problem: a 3D damped Newton iteration over the tip position $\xi_0$, tip radius $S_0$, and tip curvature $S''_0$, shooting outward until $S(\xi) \sim \varepsilon\xi$. Far from the tip (the outer region), the deviation from the undisturbed cone is small and satisfies a linearised ODE driven by the base-state capillary pressure residual. The two are joined by matched asymptotics.
+
+## What this code does
+
+The project has four layers, each in its own source file(s):
+
+**Symbolic slender-body derivation** (`src/expr.jl`, `src/series.jl`, `src/slender.jl`, `src/similarity.jl`). A lightweight symbolic CAS -- expression trees with differentiation, substitution, and series expansion in $\varepsilon$ -- derives the 1D slender model from the full axisymmetric Euler equations and reduces it to similarity ODEs. No dependency on Symbolics.jl; the CAS follows the AST patterns of [TensorGR.jl](https://github.com/tobiasosborne/TensorGR.jl).
+
+**Inner BVP solver** (`src/inner.jl`). Solves the nonlinear similarity ODEs as a 4-component system $[S,\, S',\, S'',\, U]$ with the dispersive $S'''$ term from axial curvature. Shooting from the tip with $S'(\xi_0)=0$ (rounded tip), $U(\xi_0)=\tfrac{4}{5}\xi_0$ (regularity), integrated with Rodas5P. Three far-field conditions (slope, velocity, curvature decay) are matched by 3D damped Newton.
+
+**Outer solver and matched composite** (`src/outer.jl`, `src/outer_hierarchy.jl`, `src/composite.jl`). The linearised outer ODE is derived both by hand and verified by the CAS (which substitutes the ansatz $S = \varepsilon\xi + \varepsilon^3\sigma_1 + \varepsilon^5\sigma_2$ and collects at each $\varepsilon$-order). The outer is matched to the inner solution's state at $\xi_{\text{match}} \approx 15$ and integrated outward. An additive composite with hemispherical tip cap gives the full profile from $S=0$ to the far-field cone.
+
+**PDE verification** (`src/pde.jl`). The time-dependent 1D slender model is solved directly by method of lines: 2nd-order finite differences on a tanh-stretched grid, implicit FBDF time integration. Rescaling PDE snapshots to similarity variables confirms convergence toward $S(\xi)$.
+
+## Key results
+
+### Similarity profile near the tip
+
+The inner solution produces a blob at $\xi_0 \approx 2.77$ with $S_0 \approx 0.21$, followed by a train of capillary waves that decay toward the undisturbed cone $S = \varepsilon\xi$.
+
+![Similarity profile](figures/fig1_similarity_profile.pdf)
+
+### Capillary wave structure
+
+The excess $S(\xi) - \varepsilon\xi$ reveals 6--10 oscillations with amplitude decaying away from the tip. The dispersive $S'''$ term is essential: without it, the capillary waves vanish.
+
+![Blob excess](figures/fig2_blob_excess.pdf)
+
+### Self-similar recoil in physical space
+
+The similarity solution maps to physical coordinates at any time $t$ via $z = t^{2/3}\xi$, $R = t^{2/3}S$. The blob grows, the capillary waves stretch, and the profile retains its shape under rescaling.
+
+![Recoil profiles](figures/fig3_recoil_profiles.pdf)
+
+### Axisymmetric tip shape
+
+The recoiled tip at $t = 1.0$, shown as the full axisymmetric body of revolution with hemispherical cap. The blob and first few capillary wave crests are clearly visible.
+
+![Tip shape](figures/fig4_tip_shape.pdf)
+
+### Similarity velocity
+
+The velocity field $U(\xi)$ peaks near the tip (fluid pushed away by capillary pressure) and oscillates in phase with the capillary waves before decaying to zero.
+
+![Velocity](figures/fig5_velocity.pdf)
+
+### Matched asymptotic composite
+
+Inner solution (nonlinear BVP near tip) blended with the outer solution (linearised, or full nonlinear from the matching point) to give a single profile from $S = 0$ at the axis through the blob to the undisturbed cone. The CAS-derived hierarchy confirms that higher-order $\varepsilon$-corrections are negligible at $\varepsilon = 0.1$.
+
+![Matched asymptotic](figures/fig6_matched_asymptotic.pdf)
+
+## How to run
+
+Requires Julia 1.10+ with DifferentialEquations.jl and Plots.jl.
+
+```bash
+# Generate all figures
+julia --project scripts/figures.jl
+
+# Run all tests (beads 1-4 are fast; bead 5 takes ~90s for the Newton BVP)
+julia --project test/runtests.jl
+
+# Run individual beads
+julia test/test_bead1.jl              # symbolic CAS (no --project needed)
+julia --project test/test_bead5.jl    # inner BVP solver
+julia --project test/test_bead8.jl    # PDE verification
+```
+
+## File map
+
+| File | Purpose |
+|------|---------|
+| `src/expr.jl`, `src/expr_ops.jl` | Symbolic expression types, differentiation, display |
+| `src/series.jl` | Series expansion in $\varepsilon$, order collection |
+| `src/slender.jl` | 1D slender-body model (mass + momentum with curvature) |
+| `src/similarity.jl` | Keller--Miksis similarity reduction to ODEs |
+| `src/inner.jl` | Inner BVP: 3D Newton shooting, Rodas5P, 4-component ODE |
+| `src/outer.jl` | Outer linearised problem, 4-component with $S'''$ |
+| `src/outer_hierarchy.jl` | CAS-derived $\varepsilon$-hierarchy, full nonlinear outer solver |
+| `src/composite.jl` | Additive composite matching |
+| `src/pde.jl` | Time-dependent PDE: FBDF, non-uniform FD, $R_{zzz}$ |
+| `scripts/figures.jl` | All figure generation |
+
+## Known limitations
+
+- The 3D Newton BVP converges to ~2% far-field slope error. A continuation or homotopy method would improve this.
+- The PDE solver is limited to $t \lesssim 0.04$ by stiffness from capillary pressure near the truncated tip. Adaptive mesh refinement would help.
+- The outer expansion is formally leading-order. The CAS machinery for higher orders exists but the $\varepsilon$-power structure mixes oddly with the similarity scaling (the base state has a nonzero momentum residual at $O(\varepsilon^{-1})$).
+
+## References
+
+- S. P. Decent and A. C. King, "Surface-tension-driven flow in a slender cone," *Q. J. Mech. Appl. Math.* **61**(1), 2008. [doi:10.1093/qjmam/hbm028](https://doi.org/10.1093/qjmam/hbm028)
+- S. P. Decent and A. C. King, "The Recoil of A Broken Liquid Bridge," in *IUTAM Symposium on Free Surface Flows*, Springer, 2001.
+- J. Billingham, "Surface-tension-driven flow in fat fluid wedges and cones," *J. Fluid Mech.* **397**, 45--71, 1999.
+- J. B. Keller and M. J. Miksis, "Surface tension driven flows," *SIAM J. Appl. Math.* **43**(2), 268--277, 1983.
+- J. Eggers, "Nonlinear dynamics and breakup of free-surface flows," *Rev. Mod. Phys.* **69**, 865--929, 1997.
+
+## Acknowledgement
+
+This project was built with [Claude Code](https://claude.ai/claude-code) (Anthropic).
