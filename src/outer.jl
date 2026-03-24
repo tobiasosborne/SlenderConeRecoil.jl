@@ -1,21 +1,17 @@
-# Outer linearised problem: linearise the similarity ODE about the
-# undisturbed cone S = εξ, U = 0 to get the capillary wave field.
+# Outer linearised problem with axial curvature.
 #
-# The similarity ODEs (correct signs):
-#   2S + 2S'(U - ξ) + SU' = 0              [mass]
-#   -(2/9)U + (4/9)(U - ξ)U' - S'/S² = 0   [momentum]
+# The similarity ODEs (with axial curvature):
+#   2S + 2S'(U - ξ) + SU' = 0                          [mass]
+#   -(2/9)U + (4/9)(U - ξ)U' - S'/S² - S''' = 0       [momentum]
 #
-# Linearise: S = εξ + δs, U = δu (small perturbations).
-# S' = ε + δs', U' = δu'.
+# Linearise about S = εξ, U = 0: S = εξ + δs, U = δu.
+# State vector: [s₁, s₁', s₁'', u₁] — 4 components.
 #
-# Mass at O(δ): 2δs + 2εδu - 2ξδs' + εξδu' = 0
+# Linearised mass (unchanged): 2s₁ + 2εu₁ - 2ξs₁' + εξu₁' = 0
+# Linearised momentum: -(2/9)u₁ - (4/9)ξu₁' - s₁'/(ε²ξ²) + 2s₁/(ε²ξ³) - s₁''' = 1/(εξ²)
 #
-# Momentum at O(δ):
-#   -(2/9)δu + (4/9)(-ξ)δu' - (ε+δs')/(εξ)² + 2εδs/(εξ)³ = 0
-#   base-state residual: -ε/(εξ)² = -1/(εξ²) [nonzero! drives the perturbation]
-#   linearised: -(2/9)δu - (4/9)ξδu' - δs'/(ε²ξ²) + 2δs/(ε²ξ³) = 1/(εξ²)
-#
-# This is an inhomogeneous linear ODE system for (δs, δu).
+# The -s₁''' term is the dispersive axial curvature contribution
+# that produces capillary waves in the outer region.
 
 using DifferentialEquations
 
@@ -23,94 +19,79 @@ export solve_outer, OuterSolution
 
 struct OuterSolution
     ξ::Vector{Float64}
-    s₁::Vector{Float64}     # perturbation to S
-    u₁::Vector{Float64}     # perturbation velocity
+    s₁::Vector{Float64}      # perturbation to S
+    s₁ξ::Vector{Float64}     # s₁'
+    s₁ξξ::Vector{Float64}    # s₁''
+    u₁::Vector{Float64}      # perturbation velocity
     ε::Float64
 end
 
-# ── Linearised ODE (correct signs) ────────────────────────────────────
+# ── Linearised ODE (4-component with S''') ─────────────────────────────
 """
-    outer_rhs!(dy, y, p, ξ)
+State y = [s₁, s₁', s₁'', u₁].
 
-Linearised ODE for the outer perturbation (correct momentum sign).
-y = [s₁, u₁] where S = εξ + s₁, U = u₁.
+From mass: u₁' = (2s₁ - 2εu₁ - 2εξ - (4/9)ε²ξ³u₁) / (εξ + (8/9)ε²ξ⁴)
+From momentum: s₁''' = -(2/9)u₁ - (4/9)ξu₁' - s₁'/(ε²ξ²) + 2s₁/(ε²ξ³) - 1/(εξ²)
 
-From linearised mass: 2s₁ + 2εu₁ - 2ξs₁' + εξu₁' = 0
-From linearised momentum: -(2/9)u₁ - (4/9)ξu₁' - s₁'/(ε²ξ²) + 2s₁/(ε²ξ³) = 1/(εξ²)
-
-Resolve for (s₁', u₁'):
-From momentum: s₁'/(ε²ξ²) = -(2/9)u₁ - (4/9)ξu₁' + 2s₁/(ε²ξ³) - 1/(εξ²)
-               s₁' = -(2/9)ε²ξ²u₁ - (4/9)ε²ξ³u₁' + 2s₁/ξ - ε
-
-Substitute into mass to get u₁', then back-substitute for s₁'.
+dy = [s₁', s₁'', s₁''', u₁']
 """
 function outer_rhs!(dy, y, p, ξ)
     ε = p[1]
-    s₁, u₁ = y
+    s₁, s₁p, s₁pp, u₁ = y
 
     if ξ < 1e-6
-        dy[1] = 0.0
-        dy[2] = 0.0
+        dy .= 0.0
         return
     end
 
-    # From momentum resolved for s₁':
-    #   s₁' = -(2/9)ε²ξ²u₁ - (4/9)ε²ξ³u₁' + 2s₁/ξ - ε
-    #
-    # Substitute into mass: 2s₁ + 2εu₁ - 2ξ[-(2/9)ε²ξ²u₁ - (4/9)ε²ξ³u₁' + 2s₁/ξ - ε] + εξu₁' = 0
-    #   2s₁ + 2εu₁ + (4/9)ε²ξ³u₁ + (8/9)ε²ξ⁴u₁' - 4s₁ + 2εξ + εξu₁' = 0
-    #   -2s₁ + 2εu₁ + 2εξ + (4/9)ε²ξ³u₁ + (εξ + (8/9)ε²ξ⁴)u₁' = 0
-    #
-    #   u₁' = (2s₁ - 2εu₁ - 2εξ - (4/9)ε²ξ³u₁) / (εξ + (8/9)ε²ξ⁴)
-
+    # u₁' from mass (same resolution as before)
     numer_u = 2*s₁ - 2*ε*u₁ - 2*ε*ξ - (4/9)*ε^2*ξ^3*u₁
-    denom_u = ε*ξ + (8/9)*ε^2*ξ^4    # always positive for ξ > 0, ε > 0
+    denom_u = ε*ξ + (8/9)*ε^2*ξ^4
 
     if abs(denom_u) < 1e-14
-        dy[1] = 0.0
-        dy[2] = 0.0
+        dy .= 0.0
         return
     end
 
-    u₁ξ = numer_u / denom_u
+    u₁p = numer_u / denom_u
 
-    # s₁' from momentum
-    s₁ξ = -(2/9)*ε^2*ξ^2*u₁ - (4/9)*ε^2*ξ^3*u₁ξ + 2*s₁/ξ - ε
+    # s₁''' from momentum (with axial curvature term)
+    s₁ppp = -(2/9)*u₁ - (4/9)*ξ*u₁p - s₁p/(ε^2*ξ^2) + 2*s₁/(ε^2*ξ^3) - 1/(ε*ξ^2)
 
-    dy[1] = s₁ξ
-    dy[2] = u₁ξ
+    dy[1] = s₁p     # ds₁/dξ
+    dy[2] = s₁pp    # ds₁'/dξ = s₁''
+    dy[3] = s₁ppp   # ds₁''/dξ = s₁'''
+    dy[4] = u₁p     # du₁/dξ
 end
 
 # ── Solver ─────────────────────────────────────────────────────────────
 """
-    solve_outer(; ε=0.1, ξ_min=1.0, ξ_max=50.0, s₁_init=0.0, u₁_init=0.0)
+    solve_outer(; ε=0.1, ξ_min=3.0, ξ_max=50.0)
 
 Solve the outer linearised problem by integrating inward from ξ_max.
+At ξ_max, all perturbations are zero (unperturbed cone) except a small
+seed to excite the decaying modes.
 """
-function solve_outer(; ε::Float64=0.1, ξ_min::Float64=1.0, ξ_max::Float64=50.0,
-                      s₁_init::Float64=0.0, u₁_init::Float64=0.0)
-    y0 = [s₁_init, u₁_init]
+function solve_outer(; ε::Float64=0.1, ξ_min::Float64=3.0, ξ_max::Float64=50.0,
+                      seed::Float64=0.0)
+    # Initial condition at ξ_max: small perturbation
+    y0 = [seed, 0.0, 0.0, 0.0]
     tspan = (ξ_max, ξ_min)  # integrate inward
     p = [ε]
 
     prob = ODEProblem(outer_rhs!, y0, tspan, p)
-    sol = solve(prob, Tsit5(); reltol=1e-10, abstol=1e-12,
-                maxiters=100_000)
+    sol = solve(prob, Rodas5P(); reltol=1e-8, abstol=1e-10,
+                maxiters=500_000)
 
     ξ_vals = reverse(sol.t)
     s₁_vals = reverse([sol.u[i][1] for i in eachindex(sol.u)])
-    u₁_vals = reverse([sol.u[i][2] for i in eachindex(sol.u)])
+    s₁p_vals = reverse([sol.u[i][2] for i in eachindex(sol.u)])
+    s₁pp_vals = reverse([sol.u[i][3] for i in eachindex(sol.u)])
+    u₁_vals = reverse([sol.u[i][4] for i in eachindex(sol.u)])
 
-    OuterSolution(ξ_vals, s₁_vals, u₁_vals, ε)
+    OuterSolution(ξ_vals, s₁_vals, s₁p_vals, s₁pp_vals, u₁_vals, ε)
 end
 
-"""
-    solve_outer_driven(; ε=0.1, ξ_min=1.0, ξ_max=50.0)
-
-Solve with a small seed perturbation to excite the capillary wave response.
-"""
-function solve_outer_driven(; ε::Float64=0.1, ξ_min::Float64=1.0, ξ_max::Float64=50.0)
-    s₁_init = ε^2
-    u₁_init = 0.0
-    solve_outer(ε=ε, ξ_min=ξ_min, ξ_max=ξ_max, s₁_init=s₁_init, u₁_init=u₁_init)
+function solve_outer_driven(; ε::Float64=0.1, ξ_min::Float64=3.0, ξ_max::Float64=50.0)
+    solve_outer(ε=ε, ξ_min=ξ_min, ξ_max=ξ_max, seed=ε^2)
 end
