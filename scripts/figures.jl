@@ -89,10 +89,16 @@ function figure3(sol)
         ℓ = t^(2/3)
         z_vals = sol.ξ .* ℓ
         R_vals = sol.S .* ℓ
+        z_tip = sol.ξ₀ * ℓ
+        R_tip = sol.S₀ * ℓ
 
-        # Only plot up to z = 10
-        idx = z_vals .< 10
-        plot!(p, z_vals[idx], R_vals[idx], label="t=$t", color=colors[k])
+        # Add hemispherical cap at tip (upper half: axis → profile)
+        z_cap, r_cap = tip_cap_upper(z_tip, R_tip)
+        z_full = vcat(z_cap, z_vals)
+        R_full = vcat(r_cap, R_vals)
+
+        idx = z_full .< 10
+        plot!(p, z_full[idx], R_full[idx], label="t=$t", color=colors[k])
     end
 
     # Undisturbed cone for reference
@@ -118,42 +124,80 @@ function figure3(sol)
     println("  Saved.")
 end
 
-# ── Figure 4: 2D axisymmetric shape (cross-section) ───────────────────
+# ── Helper: hemispherical cap at the tip ────────────────────────────────
+"""
+Left-facing semicircular cap connecting 1D profile (R=R_tip at z=z_tip)
+to R=0 on the axis. The cap curves LEFT from z_tip to z_tip - R_tip.
+
+Full cap (upper+lower): θ from π/2 → 0 → -π/2
+  z = z_tip - R_tip·cos(θ),  r = R_tip·sin(θ)
+
+Upper half only: θ from 0 → π/2 (r goes 0 → R_tip, z goes z_tip-R_tip → z_tip)
+"""
+function tip_cap(z_tip, R_tip; n=50)
+    # Full cap: from top (r=+R_tip) around left to bottom (r=-R_tip)
+    θ = range(π/2, -π/2, length=n)
+    z_cap = z_tip .- R_tip .* cos.(θ)
+    r_cap = R_tip .* sin.(θ)
+    (z_cap, r_cap)
+end
+
+function tip_cap_upper(z_tip, R_tip; n=30)
+    # Upper half only: from axis (r=0) to profile start (r=R_tip)
+    θ = range(0, π/2, length=n)
+    z_cap = z_tip .- R_tip .* cos.(θ)
+    r_cap = R_tip .* sin.(θ)
+    (z_cap, r_cap)
+end
+
+# ── Figure 4: 2D axisymmetric shape — zoomed on tip ───────────────────
 function figure4(sol)
-    println("Figure 4: 2D axisymmetric cross-section...")
+    println("Figure 4: Axisymmetric tip shape (zoomed)...")
     ε = 0.1
     t = 1.0
     ℓ = t^(2/3)
     z_vals = sol.ξ .* ℓ
     R_vals = sol.S .* ℓ
 
-    # Crop to region near tip
-    z_crop = 8.0
-    idx = z_vals .< z_crop
+    z_tip = sol.ξ₀ * ℓ
+    R_tip = sol.S₀ * ℓ
 
-    p = plot(xlabel="z", ylabel="r (radial)",
-             title="Axisymmetric profile at t=$t (ε=$ε)")
+    # Zoom tightly on tip: from just before cap to a few R_tip beyond
+    z_lo = z_tip - 2*R_tip
+    z_hi = z_tip + 12*R_tip
+    idx = (z_vals .>= z_tip) .& (z_vals .< z_hi)
 
-    # Fill between +R and -R to show the fluid body
-    plot!(p, z_vals[idx], R_vals[idx], fillrange=-R_vals[idx],
-          label="fluid body", color=:blue, alpha=0.3, linewidth=2, linecolor=:blue)
+    # Build closed profile: cap + upper + lower (reversed)
+    z_cap, r_cap = tip_cap(z_tip, R_tip, n=80)
+    z_upper = z_vals[idx]
+    r_upper = R_vals[idx]
+    z_lower = reverse(z_upper)
+    r_lower = -reverse(r_upper)
 
-    # Undisturbed cone outline
-    z_cone = range(0, z_crop, length=200)
+    z_outline = vcat(z_cap, z_upper, z_lower)
+    r_outline = vcat(r_cap, r_upper, r_lower)
+
+    p = plot(xlabel="z", ylabel="r",
+             title="Recoiled tip shape (t=$t, ε=$ε)",
+             aspect_ratio=:equal, size=(700, 500))
+
+    # Filled fluid body
+    plot!(p, z_outline, r_outline, seriestype=:shape,
+          label="fluid body", fillcolor=:blue, alpha=0.3,
+          linecolor=:blue, linewidth=2)
+
+    # Undisturbed cone
+    z_cone = range(z_lo, z_hi, length=100)
     plot!(p, z_cone, ε .* z_cone, label="undisturbed cone",
           color=:red, linestyle=:dash, linewidth=1.5)
     plot!(p, z_cone, -ε .* z_cone, label="", color=:red, linestyle=:dash,
           linewidth=1.5)
 
-    # Mark tip
-    z_tip = sol.ξ₀ * ℓ
-    scatter!(p, [z_tip], [0], label="tip (z=$(round(z_tip,digits=2)))",
-             color=:red, markersize=6)
-
-    R_max = maximum(R_vals[idx]) * 1.5
+    xlims!(p, z_lo, z_hi)
+    R_max = maximum(r_upper) * 1.5
     ylims!(p, -R_max, R_max)
 
-    savefig(p, joinpath(FIGDIR, "fig4_axisymmetric_shape.pdf"))
+    savefig(p, joinpath(FIGDIR, "fig4_tip_shape.pdf"))
     println("  Saved.")
 end
 
