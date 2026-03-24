@@ -32,37 +32,37 @@ The project has four layers, each in its own source file(s):
 
 The inner solution produces a blob at $\xi_0 \approx 2.77$ with $S_0 \approx 0.21$, followed by a train of capillary waves that decay toward the undisturbed cone $S = \varepsilon\xi$.
 
-![Similarity profile](figures/fig1_similarity_profile.pdf)
+![Similarity profile](figures/fig1_similarity_profile.png)
 
 ### Capillary wave structure
 
 The excess $S(\xi) - \varepsilon\xi$ reveals 6--10 oscillations with amplitude decaying away from the tip. The dispersive $S'''$ term is essential: without it, the capillary waves vanish.
 
-![Blob excess](figures/fig2_blob_excess.pdf)
+![Blob excess](figures/fig2_blob_excess.png)
 
 ### Self-similar recoil in physical space
 
 The similarity solution maps to physical coordinates at any time $t$ via $z = t^{2/3}\xi$, $R = t^{2/3}S$. The blob grows, the capillary waves stretch, and the profile retains its shape under rescaling.
 
-![Recoil profiles](figures/fig3_recoil_profiles.pdf)
+![Recoil profiles](figures/fig3_recoil_profiles.png)
 
 ### Axisymmetric tip shape
 
 The recoiled tip at $t = 1.0$, shown as the full axisymmetric body of revolution with hemispherical cap. The blob and first few capillary wave crests are clearly visible.
 
-![Tip shape](figures/fig4_tip_shape.pdf)
+![Tip shape](figures/fig4_tip_shape.png)
 
 ### Similarity velocity
 
 The velocity field $U(\xi)$ peaks near the tip (fluid pushed away by capillary pressure) and oscillates in phase with the capillary waves before decaying to zero.
 
-![Velocity](figures/fig5_velocity.pdf)
+![Velocity](figures/fig5_velocity.png)
 
 ### Matched asymptotic composite
 
 Inner solution (nonlinear BVP near tip) blended with the outer solution (linearised, or full nonlinear from the matching point) to give a single profile from $S = 0$ at the axis through the blob to the undisturbed cone. The CAS-derived hierarchy confirms that higher-order $\varepsilon$-corrections are negligible at $\varepsilon = 0.1$.
 
-![Matched asymptotic](figures/fig6_matched_asymptotic.pdf)
+![Matched asymptotic](figures/fig6_matched_asymptotic.png)
 
 ## How to run
 
