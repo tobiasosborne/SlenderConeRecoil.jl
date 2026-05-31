@@ -71,8 +71,11 @@ Inner solution (nonlinear BVP near tip) blended with the outer solution (lineari
 Requires Julia 1.10+ with DifferentialEquations.jl and Plots.jl.
 
 ```bash
-# Generate all figures
+# Generate all figure PDFs/PNGs and figures/metadata.toml
 julia --project scripts/figures.jl
+
+# Refresh figure metadata only, without regenerating plot binaries
+julia --project scripts/figures.jl --metadata-only
 
 # Run the default fast gate: package/API, symbolic, slender, similarity, hierarchy
 julia --project test/runtests.jl
@@ -92,6 +95,10 @@ julia --project test/test_bead8.jl    # PDE verification
 Run one Julia package/test job at a time in this project environment. The
 solver tests precompile and exercise shared package state, so concurrent fast,
 slow, or individual Julia test jobs can race with each other.
+
+Figure generation writes both PDF and PNG versions of each tracked plot from
+the same plot object and records the solver/environment metadata in
+`figures/metadata.toml`.
 
 ## File map
 

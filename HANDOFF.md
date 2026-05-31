@@ -42,7 +42,8 @@ Working implementation aimed at reproducing Decent and King (2008): slender cone
 julia --project test/runtests.jl       # default fast gate
 SLENDER_RECOIL_TEST_GROUP=slow julia --project test/runtests.jl
 SLENDER_RECOIL_TEST_GROUP=all julia --project test/runtests.jl
-julia --project scripts/figures.jl    # all figures
+julia --project scripts/figures.jl    # all figure PDFs/PNGs + figures/metadata.toml
+julia --project scripts/figures.jl --metadata-only  # metadata without plot binaries
 julia --project test/test_bead5.jl    # inner solver tests (slowest, ~50s)
 julia --project test/test_bead8.jl    # PDE tests
 julia test/test_bead1.jl              # symbolic tests (no project needed)
@@ -50,6 +51,9 @@ julia test/test_bead1.jl              # symbolic tests (no project needed)
 
 Do not run multiple Julia package, precompile, or test jobs concurrently in
 this project environment. Use the `all` group when both gates are needed.
+Figure generation saves both PDF and PNG for every tracked figure stem and
+records parameters, package version, git commit, Julia version, and solver
+diagnostics in `figures/metadata.toml`.
 
 ## Key files
 | File | LOC | Purpose |
