@@ -73,9 +73,10 @@ implementation work. The orchestrating agent owns integration quality:
 - Each implementation step is reviewed before closing its Beads issue.
 
 Be careful with Julia races. Do not run concurrent Julia package operations,
-manifest updates, precompilation, or full test jobs against the same project
-environment. If parallel exploration is unavoidable, use separate temporary
-depots and avoid writing to the project manifest.
+manifest updates, precompilation, or test jobs against the same project
+environment. This includes the fast, slow, and all test gates. If parallel
+exploration is unavoidable, use separate temporary depots and avoid writing to
+the project manifest.
 
 ## Engineering Rules
 
@@ -85,8 +86,11 @@ depots and avoid writing to the project manifest.
   invariants.
 - Write or update focused tests for behavior changes. For risky numerical work,
   add regression tests around edge cases and known reference values.
-- Run fast focused checks during development and `julia --project
-  test/runtests.jl` before closing code-changing work.
+- Run fast focused checks during development and the default fast gate
+  (`julia --project test/runtests.jl`) before closing code-changing work.
+  When solver, PDE, composite, or numerical regression behavior changes, also
+  run `SLENDER_RECOIL_TEST_GROUP=slow julia --project test/runtests.jl`; use
+  `SLENDER_RECOIL_TEST_GROUP=all` to run both gates in one Julia process.
 - Do not add GitHub Actions or external CI. Quality gates are local.
 - Keep generated figures and paper-fetching changes intentional; do not churn
   binary artifacts during unrelated fixes.

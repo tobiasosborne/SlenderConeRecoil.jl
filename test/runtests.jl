@@ -1,6 +1,34 @@
 using Test
 using SlenderConeRecoil
 
+const TEST_GROUP = lowercase(get(ENV, "SLENDER_RECOIL_TEST_GROUP", "fast"))
+const FAST_TEST_FILES = (
+    "test_bead1.jl",
+    "test_bead2.jl",
+    "test_bead3.jl",
+    "test_bead4.jl",
+    "test_outer_hierarchy.jl",
+)
+const SLOW_TEST_FILES = (
+    "test_bead5.jl",
+    "test_bead6.jl",
+    "test_bead7.jl",
+    "test_bead8.jl",
+    "test_numerical_regressions.jl",
+)
+const VALID_TEST_GROUPS = ("fast", "slow", "all")
+
+TEST_GROUP in VALID_TEST_GROUPS || error(
+    "Invalid SLENDER_RECOIL_TEST_GROUP=$(repr(TEST_GROUP)); expected one of " *
+    join(VALID_TEST_GROUPS, ", ")
+)
+
+function include_tests(files)
+    for file in files
+        include(joinpath(@__DIR__, file))
+    end
+end
+
 @testset "Package load and public API" begin
     @test Sym(:x) isa SExpr
     @test solve_inner_bvp === SlenderConeRecoil.solve_inner_bvp
@@ -28,15 +56,13 @@ using SlenderConeRecoil
     end
 end
 
-@testset "SlenderConeRecoil" begin
-    include("test_bead1.jl")
-    include("test_bead2.jl")
-    include("test_bead3.jl")
-    include("test_bead4.jl")
-    include("test_bead5.jl")
-    include("test_bead6.jl")
-    include("test_outer_hierarchy.jl")
-    include("test_bead7.jl")
-    include("test_bead8.jl")
-    include("test_numerical_regressions.jl")
+@testset "SlenderConeRecoil $(TEST_GROUP) gate" begin
+    if TEST_GROUP == "fast"
+        include_tests(FAST_TEST_FILES)
+    elseif TEST_GROUP == "slow"
+        include_tests(SLOW_TEST_FILES)
+    else
+        include_tests(FAST_TEST_FILES)
+        include_tests(SLOW_TEST_FILES)
+    end
 end

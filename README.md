@@ -74,14 +74,24 @@ Requires Julia 1.10+ with DifferentialEquations.jl and Plots.jl.
 # Generate all figures
 julia --project scripts/figures.jl
 
-# Run all tests (beads 1-4 are fast; bead 5 takes ~90s for the Newton BVP)
+# Run the default fast gate: package/API, symbolic, slender, similarity, hierarchy
 julia --project test/runtests.jl
+
+# Run the slow numerical gate: inner/outer/composite/PDE/regression solves
+SLENDER_RECOIL_TEST_GROUP=slow julia --project test/runtests.jl
+
+# Run both gates in one Julia process
+SLENDER_RECOIL_TEST_GROUP=all julia --project test/runtests.jl
 
 # Run individual beads
 julia test/test_bead1.jl              # symbolic CAS (no --project needed)
 julia --project test/test_bead5.jl    # inner BVP solver
 julia --project test/test_bead8.jl    # PDE verification
 ```
+
+Run one Julia package/test job at a time in this project environment. The
+solver tests precompile and exercise shared package state, so concurrent fast,
+slow, or individual Julia test jobs can race with each other.
 
 ## File map
 

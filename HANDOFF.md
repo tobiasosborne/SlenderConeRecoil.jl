@@ -33,17 +33,23 @@ Working implementation aimed at reproducing Decent and King (2008): slender cone
 2. **PDE long-time integration**: Stiffness from capillary pressure (1/(εz)² near tip) limits PDE to t ≈ 0.04. Adaptive mesh refinement or moving mesh needed for longer runs.
 3. **PDE blob comparison**: PDE doesn't run long enough to develop full blob structure for direct comparison with similarity solution in the inner region.
 4. **Papers/source fidelity**: The correct cone-paper metadata is Decent and King, "Surface-tension-driven flow in a slender cone," *IMA Journal of Applied Mathematics* 73(1), 37--68, DOI `10.1093/imamat/hxm043`. The previous local file named `DecentKing2008_QJMAM_61_1.pdf` was actually a QJMAM vesicle-compression paper and has been renamed locally to `docs/papers/NOT_DecentKing_PrestonJensenRichardson2008_QJMAM_61_1_hbm021.pdf`. Licensed PDFs remain ignored by git; see `docs/papers/README.md`. Missing: KellerKingTing1995 (AIP, DOI 10.1063/1.868513).
-5. **Module integration**: `src/SlenderConeRecoil.jl` exists but tests use direct `include` chains. `test/runtests.jl` covers beads 1-8, but the package module load path is not exercised yet.
+5. **Test gates**: `test/runtests.jl` now defaults to the fast package/API + symbolic/CAS gate. Set `SLENDER_RECOIL_TEST_GROUP=slow` for solver, PDE, composite, and numerical regression coverage, or `all` to run both groups in one Julia process.
 6. **Outer solution**: Currently uses zero/small seed at large ξ. True matching would use inner far-field as the boundary data for the outer problem.
 
 ## How to run
 
 ```bash
+julia --project test/runtests.jl       # default fast gate
+SLENDER_RECOIL_TEST_GROUP=slow julia --project test/runtests.jl
+SLENDER_RECOIL_TEST_GROUP=all julia --project test/runtests.jl
 julia --project scripts/figures.jl    # all figures
 julia --project test/test_bead5.jl    # inner solver tests (slowest, ~50s)
 julia --project test/test_bead8.jl    # PDE tests
 julia test/test_bead1.jl              # symbolic tests (no project needed)
 ```
+
+Do not run multiple Julia package, precompile, or test jobs concurrently in
+this project environment. Use the `all` group when both gates are needed.
 
 ## Key files
 | File | LOC | Purpose |
