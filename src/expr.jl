@@ -107,8 +107,12 @@ _sort_key(e::Mul) = (5, "", Float64(e.coeff))
 function pow(base::SExpr, exp::SExpr)
     exp isa Num && iszero(exp.val) && return Num(1)
     exp isa Num && isone(exp.val) && return base
-    base isa Num && exp isa Num && isinteger(exp.val) &&
-        return Num(base.val ^ Int(exp.val))
+    if base isa Num && exp isa Num && isinteger(exp.val)
+        n = Int(exp.val)
+        iszero(base.val) && n < 0 &&
+            throw(ArgumentError("cannot raise zero to a negative integer power"))
+        return Num(base.val ^ n)
+    end
     Pow(base, exp)
 end
 

@@ -62,6 +62,30 @@ using SlenderConeRecoil
         @test collect_order(expanded, ε, 2) == mul(Num(3), mul(x, x))
     end
 
+    @testset "expand Laurent powers with epsilon-leading base" begin
+        y = Sym(:y)
+
+        leading_only = expand_in(pow(mul(ε, x), Num(-2)), ε, 2)
+        @test collect_order(leading_only, ε, -2) == pow(x, Num(-2))
+        @test collect_order(leading_only, ε, -1) == Num(0)
+        @test collect_order(leading_only, ε, 0) == Num(0)
+        @test !occursin("1//0", sprint(show, leading_only))
+
+        base = add(mul(ε, x), mul(pow(ε, Num(3)), y))
+        expanded = expand_in(pow(base, Num(-2)), ε, 4)
+        bindings = Dict(:x => 2.0, :y => 3.0)
+
+        @test eval_sexpr(collect_order(expanded, ε, -2), bindings) ≈ 0.25
+        @test eval_sexpr(collect_order(expanded, ε, 0), bindings) ≈ -0.75
+        @test eval_sexpr(collect_order(expanded, ε, 2), bindings) ≈ 27 / 16
+        @test eval_sexpr(collect_order(expanded, ε, 4), bindings) ≈ -27 / 8
+        @test !occursin("1//0", sprint(show, expanded))
+    end
+
+    @testset "negative powers of zero fail clearly" begin
+        @test_throws ArgumentError pow(Num(0), Num(-1))
+    end
+
     @testset "expand constant" begin
         expanded = expand_in(Num(5), ε, 3)
         @test expanded == Num(5)

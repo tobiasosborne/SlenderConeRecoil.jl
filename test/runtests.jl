@@ -34,6 +34,7 @@ end
     include("test_bead4.jl")
     include("test_bead5.jl")
     include("test_bead6.jl")
+    include("test_outer_hierarchy.jl")
     include("test_bead7.jl")
     include("test_bead8.jl")
 end

@@ -51,8 +51,9 @@ function _expand(e::Pow, ε::Sym, order::Int)::SExpr
             end
             return result
         else
-            # Negative integer power: expand (1 + x)^{-n} pattern
-            return _expand_negative_pow(e.base, -n, ε, order)
+            # Negative integer power: factor the lowest ε order, then use
+            # the binomial expansion around a unit leading term.
+            return _expand_negative_pow(base_expanded, -n, ε, order)
         end
     end
     # Non-integer exponent: leave as-is
@@ -64,35 +65,80 @@ function _expand(e::Func, ε::Sym, order::Int)::SExpr
     Func(e.name, [_expand(a, ε, order) for a in e.args])
 end
 
-# ── Expand (base)^{-n} as geometric series ─────────────────────────────
+# ── Expand (base)^{-n} as Laurent/binomial series ──────────────────────
 """
-Expand base^{-n} where base = a₀ + a₁ε + ... and a₀ is the ε-free part.
-Uses the identity (a₀ + δ)^{-n} = a₀^{-n} * (1 + δ/a₀)^{-n}
-and expands (1+x)^{-n} = Σ binom(-n,k) x^k.
+Expand base^{-n} where the base may have a nonzero lowest ε order:
+base = ε^m a_m * (1 + r). Then
+base^{-n} = ε^{-mn} a_m^{-n} * (1 + r)^{-n}.
 """
 function _expand_negative_pow(base::SExpr, n::Int, ε::Sym, order::Int)::SExpr
-    a0 = collect_order(base, ε, 0)
-    δ = add(base, neg(a0))  # base - a0 = O(ε) part
+    m, a_m = _lowest_nonzero_order(base, ε)
+    leading_order = -n * m
+    leading_order > order && return Num(0)
 
-    # If base is ε-independent, δ = 0 and no expansion needed
-    if δ isa Num && iszero(δ.val)
-        return pow(a0, Num(-n))
+    unit_order = order - leading_order
+    r = _relative_tail(base, ε, m, a_m, unit_order)
+    series = _negative_binomial_series(r, n, ε, unit_order)
+    coeff_series = _mul_and_truncate(pow(a_m, Num(-n)), series, ε, unit_order)
+
+    leading_order == 0 &&
+        return _mul_and_truncate(Num(1), coeff_series, ε, order)
+
+    _mul_and_truncate(pow(ε, Num(leading_order)), coeff_series, ε, order)
+end
+
+function _lowest_nonzero_order(e::SExpr, ε::Sym)::Tuple{Int,SExpr}
+    orders = sort!(unique(k for (k, _) in _to_order_terms(e, ε)))
+    for k in orders
+        coeff = collect_order(e, ε, k)
+        !_iszero_expr(coeff) && return (k, coeff)
+    end
+    throw(ArgumentError("cannot expand negative power in $(ε.name): base has no nonzero ε-series terms"))
+end
+
+function _relative_tail(base::SExpr, ε::Sym, leading_order::Int,
+                        leading_coeff::SExpr, order::Int)::SExpr
+    terms = SExpr[]
+    orders = sort!(unique(k for (k, _) in _to_order_terms(base, ε)))
+    for k in orders
+        k <= leading_order && continue
+        relative_order = k - leading_order
+        relative_order > order && continue
+
+        coeff = collect_order(base, ε, k)
+        _iszero_expr(coeff) && continue
+
+        scaled_coeff = _mul_and_truncate(coeff, pow(leading_coeff, Num(-1)), ε, 0)
+        term = relative_order == 0 ?
+            scaled_coeff :
+            _mul_and_truncate(scaled_coeff, pow(ε, Num(relative_order)), ε, order)
+        push!(terms, term)
     end
 
-    # (1 + δ/a₀)^{-n} via binomial series
-    x = δ / a0  # this is O(ε)
+    isempty(terms) ? Num(0) : add(terms...)
+end
+
+function _negative_binomial_series(x::SExpr, n::Int, ε::Sym, order::Int)::SExpr
+    _iszero_expr(x) && return Num(1)
+
+    x_expanded = _expand(x, ε, order)
     series = Num(1)
     x_power = Num(1)  # x^0
     binom_coeff = Rational{Int}(1)
 
     for k in 1:order
         binom_coeff *= (-n - k + 1) // k
-        x_power = _mul_and_truncate(x_power, _expand(x, ε, order), ε, order)
-        series = add(series, mul(Num(binom_coeff), x_power))
+        x_power = _mul_and_truncate(x_power, x_expanded, ε, order)
+        _iszero_expr(x_power) && break
+        term = _mul_and_truncate(Num(binom_coeff), x_power, ε, order)
+        series = add(series, term)
     end
 
-    # Multiply by a₀^{-n}
-    _mul_and_truncate(pow(a0, Num(-n)), series, ε, order)
+    series
+end
+
+function _iszero_expr(e::SExpr)::Bool
+    e isa Num && iszero(e.val)
 end
 
 # ── Multiply two expanded expressions, truncating at order ─────────────
@@ -162,7 +208,7 @@ function _extract_eps_order(e::SExpr, ε::Sym)::Tuple{Int,SExpr}
                 push!(remaining, f)
             end
         end
-        coeff = isempty(remaining) ? Num(e.coeff) : Mul(e.coeff, remaining)
+        coeff = isempty(remaining) ? Num(e.coeff) : mul(Num(e.coeff), remaining...)
         return (total_k, coeff)
     end
     # Constant w.r.t. ε
