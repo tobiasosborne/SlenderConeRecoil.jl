@@ -1,6 +1,5 @@
 using Test
-include(joinpath(@__DIR__, "..", "src", "expr.jl"))
-include(joinpath(@__DIR__, "..", "src", "series.jl"))
+using SlenderConeRecoil
 
 @testset "Series expansion" begin
     ε = Sym(:ε)

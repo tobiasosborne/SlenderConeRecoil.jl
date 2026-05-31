@@ -1,24 +1,18 @@
 using Test
-include(joinpath(@__DIR__, "..", "src", "expr.jl"))
-include(joinpath(@__DIR__, "..", "src", "series.jl"))
-include(joinpath(@__DIR__, "..", "src", "slender.jl"))
-include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
-include(joinpath(@__DIR__, "..", "src", "inner.jl"))
-include(joinpath(@__DIR__, "..", "src", "outer.jl"))
-include(joinpath(@__DIR__, "..", "src", "composite.jl"))
+using SlenderConeRecoil
 
 @testset "Matching and composite" begin
 
     @testset "Linear interpolation" begin
         xs = [1.0, 2.0, 3.0, 4.0]
         ys = [10.0, 20.0, 30.0, 40.0]
-        @test _interp_scalar(xs, ys, 1.5) ≈ 15.0
-        @test _interp_scalar(xs, ys, 3.0) ≈ 30.0
-        @test _interp_scalar(xs, ys, 0.5) ≈ 10.0  # clamp
-        @test _interp_scalar(xs, ys, 5.0) ≈ 40.0  # clamp
+        @test SlenderConeRecoil._interp_scalar(xs, ys, 1.5) ≈ 15.0
+        @test SlenderConeRecoil._interp_scalar(xs, ys, 3.0) ≈ 30.0
+        @test SlenderConeRecoil._interp_scalar(xs, ys, 0.5) ≈ 10.0  # clamp
+        @test SlenderConeRecoil._interp_scalar(xs, ys, 5.0) ≈ 40.0  # clamp
 
         xq = [1.0, 2.5, 4.0]
-        yq = _interp(xs, ys, xq)
+        yq = SlenderConeRecoil._interp(xs, ys, xq)
         @test yq ≈ [10.0, 25.0, 40.0]
     end
 
@@ -31,7 +25,7 @@ include(joinpath(@__DIR__, "..", "src", "composite.jl"))
         U = zeros(length(ξ))
         sol = InnerSolution(ξ, S, Sξ, Sξξ, U, 0.1, S[1], 0.0)
 
-        slope, intercept = inner_far_field(sol, 10.0)
+        slope, intercept = SlenderConeRecoil.inner_far_field(sol, 10.0)
         @test slope ≈ 0.1 atol=0.01
         @test intercept ≈ 0.05 atol=0.1
     end

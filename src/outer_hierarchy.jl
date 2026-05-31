@@ -10,7 +10,7 @@
 
 using DifferentialEquations
 
-export derive_outer_equations, eval_sexpr, solve_outer_full, HierarchySolution
+export derive_outer_equations, eval_sexpr, solve_outer_full, solve_outer_linearised, HierarchySolution
 
 # ── Numerical evaluation of symbolic expressions ─────────────────────
 """Evaluate a symbolic expression tree given numerical bindings."""

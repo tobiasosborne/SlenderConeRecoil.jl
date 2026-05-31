@@ -3,18 +3,9 @@
 # Usage: julia --project scripts/figures.jl
 
 using Plots
+using SlenderConeRecoil
 default(dpi=200, size=(700, 450), linewidth=2, legend=:topright,
         guidefontsize=12, tickfontsize=10, legendfontsize=9)
-
-include(joinpath(@__DIR__, "..", "src", "expr.jl"))
-include(joinpath(@__DIR__, "..", "src", "series.jl"))
-include(joinpath(@__DIR__, "..", "src", "slender.jl"))
-include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
-include(joinpath(@__DIR__, "..", "src", "inner.jl"))
-include(joinpath(@__DIR__, "..", "src", "outer.jl"))
-include(joinpath(@__DIR__, "..", "src", "composite.jl"))
-include(joinpath(@__DIR__, "..", "src", "outer_hierarchy.jl"))
-include(joinpath(@__DIR__, "..", "src", "pde.jl"))
 
 FIGDIR = joinpath(@__DIR__, "..", "figures")
 mkpath(FIGDIR)
@@ -244,9 +235,9 @@ function figure6(inner_sol)
     blend_lo, blend_hi = ξ_match - 2.0, ξ_match + 2.0
 
     for (i, ξ) in enumerate(ξ_all)
-        Si = _interp_scalar(inner_sol.ξ, inner_sol.S, ξ)
+        Si = SlenderConeRecoil._interp_scalar(inner_sol.ξ, inner_sol.S, ξ)
         So = ξ < outer_full.ξ[1] ? ε * ξ :
-             _interp_scalar(outer_full.ξ, outer_full.S, ξ)
+             SlenderConeRecoil._interp_scalar(outer_full.ξ, outer_full.S, ξ)
         if ξ ≤ blend_lo;      S_comp[i] = Si
         elseif ξ ≥ blend_hi;  S_comp[i] = So
         else w = (ξ - blend_lo)/(blend_hi - blend_lo)

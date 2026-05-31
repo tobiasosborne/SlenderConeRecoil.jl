@@ -1,8 +1,5 @@
 using Test
-include(joinpath(@__DIR__, "..", "src", "expr.jl"))
-include(joinpath(@__DIR__, "..", "src", "series.jl"))
-include(joinpath(@__DIR__, "..", "src", "slender.jl"))
-include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
+using SlenderConeRecoil
 
 @testset "Similarity reduction" begin
     ξ = Sym(:ξ); S = Sym(:S); U = Sym(:U)
@@ -32,7 +29,7 @@ include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
     end
 
     @testset "t cancels (numerical verification)" begin
-        @test verify_t_cancels() == true
+        @test SlenderConeRecoil.verify_t_cancels() == true
     end
 
     @testset "Mass ODE: numerical evaluation" begin

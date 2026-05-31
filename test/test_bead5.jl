@@ -1,17 +1,13 @@
 using Test
-include(joinpath(@__DIR__, "..", "src", "expr.jl"))
-include(joinpath(@__DIR__, "..", "src", "series.jl"))
-include(joinpath(@__DIR__, "..", "src", "slender.jl"))
-include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
-include(joinpath(@__DIR__, "..", "src", "inner.jl"))
+using SlenderConeRecoil
 
 @testset "Inner BVP solver (with axial curvature)" begin
 
     @testset "Tip initial conditions" begin
-        ic = tip_initial_conditions(0.0, 1.0, -0.5)
+        ic = SlenderConeRecoil.tip_initial_conditions(0.0, 1.0, -0.5)
         @test ic == [1.0, 0.0, -0.5, 0.0]  # [S, S', S'', U]
 
-        ic2 = tip_initial_conditions(5.0, 0.5, -1.0)
+        ic2 = SlenderConeRecoil.tip_initial_conditions(5.0, 0.5, -1.0)
         @test ic2[4] ≈ 4.0  # U = (4/5)ξ₀
         @test ic2[2] == 0.0  # S' = 0 at tip
     end
@@ -19,13 +15,13 @@ include(joinpath(@__DIR__, "..", "src", "inner.jl"))
     @testset "ODE RHS: no singularity" begin
         du = zeros(4)
         for ξ in [0.0, 0.5, 1.0, 5.0, 10.0]
-            inner_rhs!(du, [1.0, 0.1, -0.5, 0.0], nothing, ξ + 1e-6)
+            SlenderConeRecoil.inner_rhs!(du, [1.0, 0.1, -0.5, 0.0], nothing, ξ + 1e-6)
             @test all(isfinite, du)
         end
     end
 
     @testset "Integration reaches far field" begin
-        ξv, Sv, _, _, Uv = _shoot(2.5, 0.5, -1.0, 50.0)
+        ξv, Sv, _, _, Uv = SlenderConeRecoil._shoot(2.5, 0.5, -1.0, 50.0)
         @test ξv[end] ≈ 50.0 atol=1.0
         @test all(isfinite, Sv)
         @test all(isfinite, Uv)
@@ -37,7 +33,7 @@ include(joinpath(@__DIR__, "..", "src", "inner.jl"))
         @test sol.S₀ > 0
 
         # Far-field slope near ε (with axial curvature, convergence is harder)
-        slopes = far_field_slope(sol)
+        slopes = SlenderConeRecoil.far_field_slope(sol)
         @test abs(slopes[end] - 0.1) < 0.05
 
         # Far-field U → 0

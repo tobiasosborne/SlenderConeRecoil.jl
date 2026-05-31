@@ -1,9 +1,5 @@
 using Test
-include(joinpath(@__DIR__, "..", "src", "expr.jl"))
-include(joinpath(@__DIR__, "..", "src", "series.jl"))
-include(joinpath(@__DIR__, "..", "src", "slender.jl"))
-include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
-include(joinpath(@__DIR__, "..", "src", "outer.jl"))
+using SlenderConeRecoil
 
 @testset "Outer linearised problem" begin
 
@@ -43,7 +39,7 @@ include(joinpath(@__DIR__, "..", "src", "outer.jl"))
 
     @testset "ODE RHS evaluates cleanly" begin
         dy = zeros(4)
-        outer_rhs!(dy, [0.01, 0.0, 0.0, 0.0], [0.1], 10.0)
+        SlenderConeRecoil.outer_rhs!(dy, [0.01, 0.0, 0.0, 0.0], [0.1], 10.0)
         @test all(isfinite, dy)
     end
 
@@ -53,7 +49,7 @@ include(joinpath(@__DIR__, "..", "src", "outer.jl"))
         ε = 0.1; ξ_test = 5.0
         s₁ = 0.1; s₁p = 0.02; s₁pp = 0.0; u₁ = 0.05
         dy = zeros(4)
-        outer_rhs!(dy, [s₁, s₁p, s₁pp, u₁], [ε], ξ_test)
+        SlenderConeRecoil.outer_rhs!(dy, [s₁, s₁p, s₁pp, u₁], [ε], ξ_test)
         u₁p = dy[4]
         mass_res = 2*s₁ + 2*ε*u₁ - 2*ξ_test*s₁p + ε*ξ_test*u₁p
         @test abs(mass_res) < 1e-12

@@ -1,14 +1,12 @@
 using Test
-include(joinpath(@__DIR__, "..", "src", "expr.jl"))
-include(joinpath(@__DIR__, "..", "src", "series.jl"))
-include(joinpath(@__DIR__, "..", "src", "slender.jl"))
+using SlenderConeRecoil
 
 @testset "Slender-body derivation" begin
 
     @testset "Curvature expressions" begin
-        κ_full = curvature_full()
+        κ_full = SlenderConeRecoil.curvature_full()
         @test κ_full isa SExpr
-        κ_lead = curvature_leading()
+        κ_lead = SlenderConeRecoil.curvature_leading()
         # 1/R = R^{-1}
         @test κ_lead == pow(Sym(:R), Num(-1))
     end
@@ -57,7 +55,7 @@ include(joinpath(@__DIR__, "..", "src", "slender.jl"))
     end
 
     @testset "Slender derivation verification" begin
-        @test verify_slender_derivation() == true
+        @test SlenderConeRecoil.verify_slender_derivation() == true
     end
 
     @testset "Leading-order 1D system matches known result" begin

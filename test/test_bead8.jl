@@ -1,17 +1,10 @@
 using Test
-include(joinpath(@__DIR__, "..", "src", "expr.jl"))
-include(joinpath(@__DIR__, "..", "src", "series.jl"))
-include(joinpath(@__DIR__, "..", "src", "slender.jl"))
-include(joinpath(@__DIR__, "..", "src", "similarity.jl"))
-include(joinpath(@__DIR__, "..", "src", "inner.jl"))
-include(joinpath(@__DIR__, "..", "src", "outer.jl"))
-include(joinpath(@__DIR__, "..", "src", "composite.jl"))
-include(joinpath(@__DIR__, "..", "src", "pde.jl"))
+using SlenderConeRecoil
 
 @testset "Time-dependent PDE" begin
 
     @testset "Stretched grid" begin
-        z = stretched_grid(100, 0.01, 10.0)
+        z = SlenderConeRecoil.stretched_grid(100, 0.01, 10.0)
         @test length(z) == 100
         @test z[1] ≈ 0.01
         @test z[end] ≈ 10.0
@@ -26,7 +19,7 @@ include(joinpath(@__DIR__, "..", "src", "pde.jl"))
         z = collect(range(0.0, 5.0, length=50))
         f = z .^ 2
         df = zeros(50)
-        ddz!(df, f, z)
+        SlenderConeRecoil.ddz!(df, f, z)
         for i in 5:45
             @test abs(df[i] - 2*z[i]) < 0.01
         end
@@ -34,10 +27,10 @@ include(joinpath(@__DIR__, "..", "src", "pde.jl"))
 
     @testset "Finite differences (stretched grid, sin)" begin
         # Test ddz! on f(z) = sin(z) on a non-uniform stretched grid
-        z = stretched_grid(100, 0.1, 5.0)
+        z = SlenderConeRecoil.stretched_grid(100, 0.1, 5.0)
         f = sin.(z)
         df = zeros(100)
-        ddz!(df, f, z)
+        SlenderConeRecoil.ddz!(df, f, z)
         # Interior points: should match cos(z) to 2nd order
         for i in 5:95
             @test abs(df[i] - cos(z[i])) < 0.01
