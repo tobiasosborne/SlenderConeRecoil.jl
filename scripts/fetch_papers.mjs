@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Fetch reference papers via headed Playwright browser (LUH VPN required).
+// Fetch reference papers via headed Playwright browser (institutional/TIB access required).
 // Usage: node scripts/fetch_papers.mjs
 //
-// 1. Ensure LUH VPN is active (openconnect vpn-server.uni-hannover.de).
+// 1. Ensure institutional access is active (for example, TIB VPN).
 // 2. Script opens headed Chromium with persistent profile.
 // 3. Solve any Cloudflare challenges in the browser window when prompted.
 // 4. Script fetches PDFs via page.request.get() after challenge is cleared.
@@ -20,10 +20,10 @@ const PAPERS = [
   // OUP (Oxford University Press)
   {
     label: 'DecentKing2008',
-    desc: 'Decent & King 2008 — main paper, slender cone recoil',
-    abstractUrl: 'https://academic.oup.com/qjmam/article-abstract/61/1/1/1527474',
-    pdfUrl: 'https://academic.oup.com/qjmam/article-pdf/61/1/1/5765080/hbm028.pdf',
-    file: 'DecentKing2008_QJMAM_61_1.pdf',
+    desc: 'Decent & King 2008 — main paper, slender cone recoil, IMAJAM 73(1), 37-68',
+    pdfUrl: null,
+    doiFallback: '10.1093/imamat/hxm043',
+    file: 'DecentKing2008_IMAJAM_73_1_37-68_hxm043.pdf',
     domain: 'oup',
   },
   // SIAM

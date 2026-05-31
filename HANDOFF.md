@@ -4,7 +4,7 @@
 
 Working implementation aimed at reproducing Decent and King (2008): slender cone recoil under surface tension using similarity solutions and matched asymptotics. Source fidelity is still provisional pending a line-by-line check against the correct primary source, *IMA Journal of Applied Mathematics* 73(1), 37--68, DOI `10.1093/imamat/hxm043`.
 
-### Complete pipeline (all 14 beads closed):
+### Implemented pipeline from the original bead plan:
 1. **Symbolic CAS** (beads 1-2): Expression types mirroring TensorGR.jl, series expansion in ε
 2. **1D slender model** (bead 3): Mass + momentum with κ = 1/R - Rzz (azimuthal + axial curvature)
 3. **Similarity reduction** (bead 4): Keller-Miksis t^{2/3} scaling → ODE system in S(ξ), U(ξ)
@@ -14,6 +14,9 @@ Working implementation aimed at reproducing Decent and King (2008): slender cone
 7. **PDE verification** (bead 8): Method of lines, FBDF implicit, non-uniform FD, Rzzz term
 8. **Figures** (bead 9): 7 figures including matched asymptotic profiles and tip shape
 9. **Documentation** (bead 10): docs/method.md
+
+The current Beads tracker now drives review remediation and package upgrades;
+the old numbered bead plan is provenance rather than the active task list.
 
 ### Bug fix history:
 - **15 bugs** found in initial audit (root cause: momentum sign error ∂/∂z(1/R) → -∂/∂z(1/R))
@@ -42,11 +45,12 @@ Working implementation aimed at reproducing Decent and King (2008): slender cone
 julia --project test/runtests.jl       # default fast gate
 SLENDER_RECOIL_TEST_GROUP=slow julia --project test/runtests.jl
 SLENDER_RECOIL_TEST_GROUP=all julia --project test/runtests.jl
-julia --project scripts/figures.jl    # all figure PDFs/PNGs + figures/metadata.toml
-julia --project scripts/figures.jl --metadata-only  # metadata without plot binaries
+julia --project=scripts -e 'using Pkg; Pkg.instantiate()'
+julia --project=scripts scripts/figures.jl    # all figure PDFs/PNGs + figures/metadata.toml
+julia --project=scripts scripts/figures.jl --metadata-only  # metadata without plot binaries
 julia --project test/test_bead5.jl    # inner solver tests (slowest, ~50s)
 julia --project test/test_bead8.jl    # PDE tests
-julia test/test_bead1.jl              # symbolic tests (no project needed)
+julia --project test/test_bead1.jl    # symbolic tests
 ```
 
 Do not run multiple Julia package, precompile, or test jobs concurrently in

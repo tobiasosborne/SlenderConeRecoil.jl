@@ -66,8 +66,15 @@ separate source-backed facts from inferences.
 Use subagents for independent review, synthesis, research, and focused
 implementation work. The orchestrating agent owns integration quality:
 
-- Independent review agents should not mutate source files.
-- Review agents write reports only in the dated review directory.
+- Orchestrators own Beads state, integration review, issue closure, commits,
+  pushes, and compaction-safe progress notes unless a task explicitly delegates
+  one of those duties.
+- Independent review and research agents are read-only for repository code and
+  metadata. They write only to their assigned dated artifact directory unless
+  the orchestrator gives a narrower write scope.
+- Focused implementation workers edit only the files named by their Beads
+  scope, run suitable checks, and report changed files plus validation. They do
+  not close issues, commit, or push unless explicitly asked.
 - Synthesis agents read every report before creating a plan.
 - Implementation proceeds serially through Beads issues.
 - Each implementation step is reviewed before closing its Beads issue.
@@ -92,21 +99,11 @@ the project manifest.
   run `SLENDER_RECOIL_TEST_GROUP=slow julia --project test/runtests.jl`; use
   `SLENDER_RECOIL_TEST_GROUP=all` to run both gates in one Julia process.
 - Do not add GitHub Actions or external CI. Quality gates are local.
-- Keep generated figures and paper-fetching changes intentional; do not churn
-  binary artifacts during unrelated fixes.
+- Keep generated figures, figure metadata, paper manifests, and paper-fetching
+  changes intentional; do not churn binary artifacts during unrelated fixes.
 - Bundle Beads database/cache changes into the same commit as the source or
   documentation change that caused them. Do not make standalone "bd sync"
   commits.
-
-## Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work atomically
-bd close <id>         # Complete work
-bd dolt push          # Push beads data to remote
-```
 
 ## Non-Interactive Shell Commands
 

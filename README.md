@@ -68,14 +68,20 @@ Inner solution (nonlinear BVP near tip) blended with the outer solution (lineari
 
 ## How to run
 
-Requires Julia 1.10+ with DifferentialEquations.jl and Plots.jl.
+Requires Julia 1.10+. The package runtime depends on
+DifferentialEquations.jl; figure generation uses the separate `scripts`
+environment so plotting does not become a library dependency.
 
 ```bash
+# Instantiate package and figure-tool environments
+julia --project -e 'using Pkg; Pkg.instantiate()'
+julia --project=scripts -e 'using Pkg; Pkg.instantiate()'
+
 # Generate all figure PDFs/PNGs and figures/metadata.toml
-julia --project scripts/figures.jl
+julia --project=scripts scripts/figures.jl
 
 # Refresh figure metadata only, without regenerating plot binaries
-julia --project scripts/figures.jl --metadata-only
+julia --project=scripts scripts/figures.jl --metadata-only
 
 # Run the default fast gate: package/API, symbolic, slender, similarity, hierarchy
 julia --project test/runtests.jl
@@ -87,7 +93,7 @@ SLENDER_RECOIL_TEST_GROUP=slow julia --project test/runtests.jl
 SLENDER_RECOIL_TEST_GROUP=all julia --project test/runtests.jl
 
 # Run individual beads
-julia test/test_bead1.jl              # symbolic CAS (no --project needed)
+julia --project test/test_bead1.jl    # symbolic CAS
 julia --project test/test_bead5.jl    # inner BVP solver
 julia --project test/test_bead8.jl    # PDE verification
 ```

@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
 # Generate all figures for SlenderConeRecoil.
-# Usage: julia --project scripts/figures.jl [--metadata-only]
+# Usage: julia --project=scripts scripts/figures.jl [--metadata-only]
 
 using Dates
 using TOML
@@ -34,7 +34,7 @@ const FIGURE6_XI_MAX = 80.0
 const FIGURE6_BLEND_HALF_WIDTH = 2.0
 const OUTER_LINEAR_MAXITERS = 500_000
 const OUTER_FULL_MAXITERS = 1_000_000
-const REGENERATION_COMMAND = "julia --project scripts/figures.jl"
+const REGENERATION_COMMAND = "julia --project=scripts scripts/figures.jl"
 mkpath(FIGDIR)
 
 function save_figure(p, stem::AbstractString)

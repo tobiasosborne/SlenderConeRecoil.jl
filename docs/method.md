@@ -43,10 +43,11 @@ The full 1D PDE is solved by method of lines (2nd-order FD on a non-uniform stre
 ## How to run
 
 ```bash
-julia --project scripts/figures.jl
+julia --project=scripts scripts/figures.jl
 ```
 
-Figures are saved to `figures/`.
+Figures are saved to `figures/` as tracked PDF/PNG pairs with
+`figures/metadata.toml`.
 
 ## Code ↔ Equations
 

@@ -1,8 +1,14 @@
 # CLAUDE.md — SlenderConeRecoil.jl
 
+> Archival note: this is the original implementation brief, retained for
+> provenance. Current workflow rules live in `AGENTS.md`; current run commands
+> and limitations live in `README.md` and `HANDOFF.md`; current work state lives
+> in Beads. Where this file conflicts with those sources, the current sources
+> win.
+
 ## Project identity
 
-Reproduce the core results of Decent & King, "Surface-tension-driven flow in a slender cone" (QJMAM 2008, doi:10.1093/qjmam/hbm028). The paper studies the recoil of a conical body of inviscid fluid under surface tension immediately after droplet pinch-off. The cone half-angle ε is small; a similarity transformation (Keller–Miksis t^{2/3} scaling) plus matched asymptotic expansions in ε yield a quantitative description of the recoiling tip and the capillary wave train propagating backward along the cone.
+Reproduce the core results of Decent & King, "Surface-tension-driven flow in a slender cone" (*IMA Journal of Applied Mathematics* 73(1), 37--68, doi:10.1093/imamat/hxm043). The paper studies the recoil of a conical body of inviscid fluid under surface tension immediately after droplet pinch-off. The cone half-angle ε is small; a similarity transformation (Keller–Miksis t^{2/3} scaling) plus matched asymptotic expansions in ε yield a quantitative description of the recoiling tip and the capillary wave train propagating backward along the cone.
 
 This is a computational reproduction, not a literature survey. The deliverable is working Julia code that derives, solves, and visualises the key mathematical objects in the paper.
 
@@ -68,7 +74,8 @@ Solve the time-dependent 1D PDE system directly (method of lines) and verify con
 Each bead is an atomic unit of work. Complete them in order. After each bead, run tests and commit.
 
 ### Bead 0: Project scaffold
-- `Project.toml` with deps: `DifferentialEquations`, `QuadGK`, `Plots`, `Test`
+- `Project.toml` with runtime deps: `DifferentialEquations`, `LinearAlgebra`
+- `Test` belongs in the package test target; plotting belongs in `scripts/Project.toml`
 - Directory structure: `src/`, `test/`, `scripts/`, `docs/`, `figures/`
 - Read `../TensorGR.jl/src/` and write a short summary of which modules/types are reusable in `docs/tensorgr_patterns.md`
 
@@ -130,14 +137,18 @@ Each bead is an atomic unit of work. Complete them in order. After each bead, ru
 - Figure 2: Inner, outer, and composite solutions overlaid
 - Figure 3: Time-dependent PDE snapshots, rescaled to similarity variables, collapsing onto the similarity curve
 - Figure 4: Capillary wave amplitude and wavelength vs ξ, compared to WKB prediction
-- Save as PDF to `figures/`
+- Save tracked PDF/PNG artifacts to `figures/` and refresh `figures/metadata.toml`
+  with `julia --project=scripts scripts/figures.jl`
 
 ### Bead 10: Documentation (`docs/method.md`, ≤500 words)
 - Summary of the mathematical method
 - Which equations correspond to which code
-- How to run: `julia --project scripts/figures.jl`
+- How to run: `julia --project=scripts scripts/figures.jl`
 
-## Hard rules
+## Legacy hard rules
+
+These rules were part of the seed brief and are not active repository policy.
+Use `AGENTS.md` for current workflow rules.
 
 1. **≤200 LOC per file.** If a file approaches this, split.
 2. **No Symbolics.jl, no SymPy.** Roll own expression types following TensorGR.jl.
@@ -153,7 +164,7 @@ Each bead is an atomic unit of work. Complete them in order. After each bead, ru
 - Keller & Miksis, "Surface tension driven flows", SIAM J. Appl. Math. 43 (1983) 268–277 — the t^{2/3} similarity scaling
 - Billingham, "Surface-tension-driven flow in fat fluid wedges and cones", JFM 397 (1999) 45–71 — the fat-cone (ε = O(1)) version with Hankel–Laplace transforms
 - Decent & King, "The Recoil of A Broken Liquid Bridge", IUTAM Symp. Free Surface Flows, Springer (2001) — conference proceedings version of the slender cone problem
-- Decent & King, "Surface-tension-driven flow in a slender cone", QJMAM (2008) doi:10.1093/qjmam/hbm028 — the full paper
+- Decent & King, "Surface-tension-driven flow in a slender cone", *IMA Journal of Applied Mathematics* 73(1), 37--68 (2008), doi:10.1093/imamat/hxm043 — the full paper
 - Eggers, "Nonlinear dynamics and breakup of free-surface flows", Rev. Mod. Phys. 69 (1997) — review with context
 - Keller, King & Ting, "Blob formation", Phys. Fluids 7 (1995) 226–228 — related 1D model
 

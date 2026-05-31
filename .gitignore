@@ -4,10 +4,26 @@
 *.db
 .beads-credential-key
 
+# Julia local state and scratch output
+.julia/
+LocalPreferences.toml
+*.cov
+*.mem
+coverage/
+
 # Node / Playwright (paper download tooling)
 node_modules/
 
 # Figure PDFs/PNGs and figures/metadata.toml are tracked artifacts.
+
+# Documentation and benchmark build products
+docs/build/
+docs/site/
+docs/.doctrees/
+benchmark/results/
+benchmarks/results/
+benchmark/*.json
+benchmarks/*.json
 
 # Papers (large PDFs, not tracked in git)
 docs/papers/*.pdf
