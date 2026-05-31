@@ -1,6 +1,98 @@
 # Agent Instructions
 
-This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
+This project uses **bd** (beads) for issue tracking. Run `bd prime` at the
+start of every session, after compaction, or whenever context may have been
+lost.
+
+These instructions were adapted from `../BennettVM.jl/AGENTS.md` and the
+durable workflow rules in `../Bennett.jl/CLAUDE.md`. `../Bennett.jl` did not
+contain an `AGENTS.md` when this file was updated on 2026-06-01.
+
+## Current North Star
+
+Make this repository the place to come to for best-in-class computational
+similarity methods: reliable derivations, robust numerical algorithms,
+ground-truth fidelity to the literature, reproducible figures, strong tests,
+and clear package APIs.
+
+## Durable Master Program
+
+The multi-session program is tracked in Beads. Recover state with `bd ready`,
+`bd list --status=open`, and `bd show <id>`.
+
+Umbrella issues created on 2026-06-01:
+
+- `scr-q54` - Persist master review and upgrade programme.
+- `scr-2ml` - Run rigorous multi-agent repository review.
+- `scr-88v` - Synthesize review findings into remediation plan.
+- `scr-6qi` - Execute review remediation serially.
+- `scr-x9r` - Research best-in-class similarity methods and literature.
+- `scr-ts1` - Create package upgrade plan from research.
+- `scr-8l4` - Execute package upgrade plan serially.
+
+Dependency order is intentionally serial: review, synthesis, remediation,
+research, upgrade planning, upgrade execution. Do not skip ahead unless Beads
+records why the dependency changed.
+
+## Compaction Recovery
+
+When resuming after compaction or a fresh session:
+
+1. Run `bd prime`.
+2. Run `bd ready` and inspect the active/blocked issue chain with `bd show`.
+3. Read this file, `README.md`, `HANDOFF.md`, and any current
+   `reviews/<date>-full-audit/` or `docs/research/<date>-similarity-methods/`
+   directory referenced by active Beads issues.
+4. Use `bd remember` for durable facts that are not obvious from the code or
+   issue descriptions. Do not create `MEMORY.md`.
+5. Keep issue notes current when a phase starts, pauses, or changes scope.
+
+## Review And Research Artifacts
+
+Use stable, dated artifact directories:
+
+- Repository review reports: `reviews/YYYY-MM-DD-full-audit/`
+- Review synthesis and remediation plan: same review directory.
+- Literature and algorithm research: `docs/research/YYYY-MM-DD-similarity-methods/`
+- Upgrade plans: `docs/roadmap/` or the research directory if tightly coupled.
+
+Review reports should lead with findings, cite local files and line numbers,
+include commands run, and separate confirmed defects from risks or open
+questions. Research reports must cite primary sources where possible and
+separate source-backed facts from inferences.
+
+## Subagent Orchestration
+
+Use subagents for independent review, synthesis, research, and focused
+implementation work. The orchestrating agent owns integration quality:
+
+- Independent review agents should not mutate source files.
+- Review agents write reports only in the dated review directory.
+- Synthesis agents read every report before creating a plan.
+- Implementation proceeds serially through Beads issues.
+- Each implementation step is reviewed before closing its Beads issue.
+
+Be careful with Julia races. Do not run concurrent Julia package operations,
+manifest updates, precompilation, or full test jobs against the same project
+environment. If parallel exploration is unavoidable, use separate temporary
+depots and avoid writing to the project manifest.
+
+## Engineering Rules
+
+- Be skeptical of subagent output, previous work, and your own assumptions.
+  Verify claims with code, tests, papers, or reproducible commands.
+- Prefer fail-fast behavior over silent fallbacks for mathematical or numerical
+  invariants.
+- Write or update focused tests for behavior changes. For risky numerical work,
+  add regression tests around edge cases and known reference values.
+- Run fast focused checks during development and `julia --project
+  test/runtests.jl` before closing code-changing work.
+- Do not add GitHub Actions or external CI. Quality gates are local.
+- Keep generated figures and paper-fetching changes intentional; do not churn
+  binary artifacts during unrelated fixes.
+- Bundle Beads database/cache changes into the same commit as the source or
+  documentation change that caused them. Do not make standalone "bd sync"
+  commits.
 
 ## Quick Reference
 
