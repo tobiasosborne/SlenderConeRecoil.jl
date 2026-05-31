@@ -15,7 +15,7 @@
 
 using DifferentialEquations
 
-export solve_outer, solve_outer_driven, OuterSolution
+export solve_outer, solve_outer_driven, solve_outer_matched, OuterSolution
 
 struct OuterSolution
     ξ::Vector{Float64}
@@ -114,13 +114,14 @@ oscillatory/decaying behavior seeds the outer solution.
 """
 function solve_outer_matched(inner; ξ_match::Float64=15.0, ξ_max::Float64=100.0,
                              maxiters::Int=500_000)
+    _require_matching_interval(inner, ξ_match, ξ_max; context="outer matched solve")
     ε = inner.S[end] / inner.ξ[end]  # estimate ε from far-field slope
 
     # Interpolate inner state at matching point
-    s₁_m = _interp_val(inner.ξ, inner.S, ξ_match) - ε * ξ_match
-    s₁p_m = _interp_val(inner.ξ, inner.Sξ, ξ_match) - ε
-    s₁pp_m = _interp_val(inner.ξ, inner.Sξξ, ξ_match)
-    u₁_m = _interp_val(inner.ξ, inner.U, ξ_match)
+    s₁_m = _interp_val_strict(inner.ξ, inner.S, ξ_match; context="outer matched solve S") - ε * ξ_match
+    s₁p_m = _interp_val_strict(inner.ξ, inner.Sξ, ξ_match; context="outer matched solve Sξ") - ε
+    s₁pp_m = _interp_val_strict(inner.ξ, inner.Sξξ, ξ_match; context="outer matched solve Sξξ")
+    u₁_m = _interp_val_strict(inner.ξ, inner.U, ξ_match; context="outer matched solve U")
 
     y0 = [s₁_m, s₁p_m, s₁pp_m, u₁_m]
     tspan = (ξ_match, ξ_max)
@@ -139,12 +140,64 @@ function solve_outer_matched(inner; ξ_match::Float64=15.0, ξ_max::Float64=100.
     OuterSolution(ξ_vals, s₁_vals, s₁p_vals, s₁pp_vals, u₁_vals, ε, diagnostics)
 end
 
-# Simple linear interpolation for a single point
+# Validate an interpolation table before callers rely on endpoint and domain semantics.
+function _validate_interpolation_table(xs, ys; context::AbstractString="interpolation")
+    length(xs) == length(ys) ||
+        throw(ArgumentError("$context requires coordinate and value vectors with equal lengths; got $(length(xs)) and $(length(ys))"))
+    length(xs) >= 2 ||
+        throw(ArgumentError("$context requires at least two grid points; got $(length(xs))"))
+    all(isfinite, xs) ||
+        throw(ArgumentError("$context requires finite coordinates"))
+    all(isfinite, ys) ||
+        throw(ArgumentError("$context requires finite values"))
+    for i in 2:length(xs)
+        xs[i] > xs[i-1] ||
+            throw(ArgumentError("$context requires a strictly increasing grid; found xs[$(i-1)]=$(xs[i-1]) and xs[$i]=$(xs[i])"))
+    end
+    nothing
+end
+
+function _require_in_interpolation_domain(xs, x; context::AbstractString="interpolation",
+                                          x_name::AbstractString="x")
+    isfinite(x) ||
+        throw(ArgumentError("$context requires finite $x_name; got $x"))
+    lo = xs[1]
+    hi = xs[end]
+    lo <= x <= hi ||
+        throw(ArgumentError("$context requires $x_name in [$lo, $hi]; got $x"))
+    nothing
+end
+
+function _require_matching_interval(inner, ξ_match::Float64, ξ_max::Float64;
+                                    context::AbstractString)
+    _validate_interpolation_table(inner.ξ, inner.S; context="$context inner S")
+    _validate_interpolation_table(inner.ξ, inner.Sξ; context="$context inner Sξ")
+    _validate_interpolation_table(inner.ξ, inner.Sξξ; context="$context inner Sξξ")
+    _validate_interpolation_table(inner.ξ, inner.U; context="$context inner U")
+    _require_in_interpolation_domain(inner.ξ, ξ_match; context=context, x_name="ξ_match")
+    isfinite(ξ_max) ||
+        throw(ArgumentError("$context requires finite ξ_max; got $ξ_max"))
+    ξ_max > ξ_match ||
+        throw(ArgumentError("$context requires ξ_max > ξ_match; got ξ_max=$ξ_max and ξ_match=$ξ_match"))
+    nothing
+end
+
+# Clamping linear interpolation helper for a single point. Higher-level
+# matching/composite code should call the strict wrapper below.
 function _interp_val(xs, ys, x)
+    _validate_interpolation_table(xs, ys; context="clamping interpolation")
+    isfinite(x) ||
+        throw(ArgumentError("clamping interpolation requires finite query coordinate; got $x"))
     if x <= xs[1]; return ys[1]; end
     if x >= xs[end]; return ys[end]; end
     i = searchsortedlast(xs, x)
     i = clamp(i, 1, length(xs)-1)
     t = (x - xs[i]) / (xs[i+1] - xs[i])
     ys[i] + t * (ys[i+1] - ys[i])
+end
+
+function _interp_val_strict(xs, ys, x; context::AbstractString="strict interpolation")
+    _validate_interpolation_table(xs, ys; context=context)
+    _require_in_interpolation_domain(xs, x; context=context)
+    _interp_val(xs, ys, x)
 end

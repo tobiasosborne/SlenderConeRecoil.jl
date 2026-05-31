@@ -113,13 +113,14 @@ drift that accumulates when shooting from the tip.
 """
 function solve_outer_full(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0,
                           maxiters::Int=1_000_000)
+    _require_matching_interval(inner, ξ_match, ξ_max; context="outer full solve")
     ε = inner.S[end] / inner.ξ[end]
 
     # Extract inner state at matching point
-    S_m  = _interp_val(inner.ξ, inner.S, ξ_match)
-    Sp_m = _interp_val(inner.ξ, inner.Sξ, ξ_match)
-    Spp_m = _interp_val(inner.ξ, inner.Sξξ, ξ_match)
-    U_m  = _interp_val(inner.ξ, inner.U, ξ_match)
+    S_m  = _interp_val_strict(inner.ξ, inner.S, ξ_match; context="outer full solve S")
+    Sp_m = _interp_val_strict(inner.ξ, inner.Sξ, ξ_match; context="outer full solve Sξ")
+    Spp_m = _interp_val_strict(inner.ξ, inner.Sξξ, ξ_match; context="outer full solve Sξξ")
+    U_m  = _interp_val_strict(inner.ξ, inner.U, ξ_match; context="outer full solve U")
 
     y0 = [S_m, Sp_m, Spp_m, U_m]
     prob = ODEProblem(inner_rhs!, y0, (ξ_match, ξ_max))
@@ -147,12 +148,13 @@ term in the formal hierarchy derived by the CAS.
 """
 function solve_outer_linearised(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0,
                                 maxiters::Int=500_000)
+    _require_matching_interval(inner, ξ_match, ξ_max; context="outer linearised hierarchy solve")
     ε = inner.S[end] / inner.ξ[end]
 
-    s_m  = _interp_val(inner.ξ, inner.S, ξ_match) - ε * ξ_match
-    sp_m = _interp_val(inner.ξ, inner.Sξ, ξ_match) - ε
-    spp_m = _interp_val(inner.ξ, inner.Sξξ, ξ_match)
-    u_m  = _interp_val(inner.ξ, inner.U, ξ_match)
+    s_m  = _interp_val_strict(inner.ξ, inner.S, ξ_match; context="outer linearised hierarchy solve S") - ε * ξ_match
+    sp_m = _interp_val_strict(inner.ξ, inner.Sξ, ξ_match; context="outer linearised hierarchy solve Sξ") - ε
+    spp_m = _interp_val_strict(inner.ξ, inner.Sξξ, ξ_match; context="outer linearised hierarchy solve Sξξ")
+    u_m  = _interp_val_strict(inner.ξ, inner.U, ξ_match; context="outer linearised hierarchy solve U")
 
     prob = ODEProblem(outer_rhs!, [s_m, sp_m, spp_m, u_m], (ξ_match, ξ_max), [ε])
     sol = solve(prob, Rodas5P(); reltol=1e-8, abstol=1e-10, maxiters=maxiters)

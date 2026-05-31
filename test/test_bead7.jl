@@ -3,17 +3,21 @@ using SlenderConeRecoil
 
 @testset "Matching and composite" begin
 
-    @testset "Linear interpolation" begin
+    @testset "Clamping interpolation helper" begin
         xs = [1.0, 2.0, 3.0, 4.0]
         ys = [10.0, 20.0, 30.0, 40.0]
         @test SlenderConeRecoil._interp_scalar(xs, ys, 1.5) ≈ 15.0
         @test SlenderConeRecoil._interp_scalar(xs, ys, 3.0) ≈ 30.0
-        @test SlenderConeRecoil._interp_scalar(xs, ys, 0.5) ≈ 10.0  # clamp
-        @test SlenderConeRecoil._interp_scalar(xs, ys, 5.0) ≈ 40.0  # clamp
+        @test SlenderConeRecoil._interp_scalar(xs, ys, 0.5) ≈ 10.0
+        @test SlenderConeRecoil._interp_scalar(xs, ys, 5.0) ≈ 40.0
 
         xq = [1.0, 2.5, 4.0]
         yq = SlenderConeRecoil._interp(xs, ys, xq)
         @test yq ≈ [10.0, 25.0, 40.0]
+
+        @test_throws ArgumentError SlenderConeRecoil._interp_scalar([1.0, 1.0, 2.0], ys[1:3], 1.5)
+        @test_throws ArgumentError SlenderConeRecoil._interp_scalar([1.0, 3.0, 2.0], ys[1:3], 1.5)
+        @test_throws ArgumentError SlenderConeRecoil._interp_scalar(xs, ys[1:3], 1.5)
     end
 
     @testset "Inner far-field extraction" begin
@@ -28,6 +32,60 @@ using SlenderConeRecoil
         slope, intercept = SlenderConeRecoil.inner_far_field(sol, 10.0)
         @test slope ≈ 0.1 atol=0.01
         @test intercept ≈ 0.05 atol=0.1
+        @test_throws ArgumentError SlenderConeRecoil.inner_far_field(sol, 24.5)
+        @test_throws ArgumentError SlenderConeRecoil.inner_far_field(sol, 30.0)
+    end
+
+    @testset "Validated matching and overlap domains" begin
+        ξ = collect(0.0:1.0:10.0)
+        S = 0.1 .* ξ .+ 0.05
+        Sξ = 0.1 .* ones(length(ξ))
+        Sξξ = zeros(length(ξ))
+        U = zeros(length(ξ))
+        inner = InnerSolution(ξ, S, Sξ, Sξξ, U, 0.0, S[1], 0.0)
+
+        outer_ξ = collect(2.0:2.0:10.0)
+        outer = OuterSolution(outer_ξ, zeros(length(outer_ξ)), zeros(length(outer_ξ)),
+                              zeros(length(outer_ξ)), zeros(length(outer_ξ)), 0.1)
+
+        @test_throws ArgumentError solve_outer_matched(inner; ξ_match=-1.0, ξ_max=12.0)
+        @test_throws ArgumentError solve_outer_matched(inner; ξ_match=11.0, ξ_max=12.0)
+        @test_throws ArgumentError solve_outer_matched(inner; ξ_match=5.0, ξ_max=5.0)
+        @test_throws ArgumentError solve_outer_full(inner; ξ_match=-1.0, ξ_max=12.0)
+        @test_throws ArgumentError solve_outer_linearised(inner; ξ_match=11.0, ξ_max=12.0)
+
+        disjoint_outer = OuterSolution([20.0, 21.0], [0.0, 0.0], [0.0, 0.0],
+                                       [0.0, 0.0], [0.0, 0.0], 0.1)
+        touching_outer = OuterSolution([10.0, 11.0], [0.0, 0.0], [0.0, 0.0],
+                                       [0.0, 0.0], [0.0, 0.0], 0.1)
+        @test_throws ArgumentError composite_solution(inner, disjoint_outer; n_points=10)
+        @test_throws ArgumentError composite_solution(inner, touching_outer; n_points=10)
+        @test_throws ArgumentError overlap_residual(inner, disjoint_outer)
+        @test_throws ArgumentError composite_solution(inner, outer; ξ_grid=[2.0, 1.0])
+        @test_throws ArgumentError composite_solution(inner, outer; ξ_grid=[1.0, 3.0])
+        @test_throws ArgumentError composite_solution(inner, outer; ξ_match=1.0)
+        @test_throws ArgumentError composite_solution(inner, outer; ξ_match=10.0)
+        @test_throws ArgumentError overlap_residual(inner, outer; ξ_start=1.0, ξ_end=3.0)
+    end
+
+    @testset "Composite subtracts fitted overlap" begin
+        ξ = collect(0.0:1.0:10.0)
+        S = 0.1 .* ξ .+ 0.05
+        Sξ = 0.1 .* ones(length(ξ))
+        Sξξ = zeros(length(ξ))
+        U = zeros(length(ξ))
+        inner = InnerSolution(ξ, S, Sξ, Sξξ, U, 0.0, S[1], 0.0)
+
+        outer_ξ = collect(2.0:2.0:10.0)
+        outer = OuterSolution(outer_ξ, zeros(length(outer_ξ)), zeros(length(outer_ξ)),
+                              zeros(length(outer_ξ)), zeros(length(outer_ξ)), 0.1)
+
+        comp = composite_solution(inner, outer; n_points=25)
+        @test comp.diagnostics.overlap_slope ≈ 0.1 atol=1e-12
+        @test comp.diagnostics.overlap_intercept ≈ 0.05 atol=1e-12
+        @test comp.diagnostics.ξ_match ≈ 2.0
+        @test comp.diagnostics.fit_points == count(x -> x > 2.0, ξ)
+        @test comp.S ≈ 0.1 .* comp.ξ atol=1e-12
     end
 
     @testset "Composite construction runs" begin
