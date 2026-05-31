@@ -93,7 +93,12 @@ struct HierarchySolution
     Sξξ::Vector{Float64}
     U::Vector{Float64}
     ε::Float64
+    diagnostics::NamedTuple
 end
+
+HierarchySolution(ξ, S, Sξ, Sξξ, U, ε) =
+    HierarchySolution(ξ, S, Sξ, Sξξ, U, ε,
+                      _manual_solution_diagnostics("HierarchySolution constructed directly", ξ))
 
 """
     solve_outer_full(inner; ξ_match=15.0, ξ_max=80.0)
@@ -106,7 +111,8 @@ that the linearised outer solver misses.
 The result extends the inner solution into the far-field without the
 drift that accumulates when shooting from the tip.
 """
-function solve_outer_full(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0)
+function solve_outer_full(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0,
+                          maxiters::Int=1_000_000)
     ε = inner.S[end] / inner.ξ[end]
 
     # Extract inner state at matching point
@@ -117,7 +123,8 @@ function solve_outer_full(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0)
 
     y0 = [S_m, Sp_m, Spp_m, U_m]
     prob = ODEProblem(inner_rhs!, y0, (ξ_match, ξ_max))
-    sol = solve(prob, Rodas5P(); reltol=1e-10, abstol=1e-12, maxiters=1_000_000)
+    sol = solve(prob, Rodas5P(); reltol=1e-10, abstol=1e-12, maxiters=maxiters)
+    diagnostics = _require_successful_solution(sol, ξ_max; context="outer full solve")
 
     n = length(sol.t)
     HierarchySolution(
@@ -126,7 +133,8 @@ function solve_outer_full(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0)
         [sol.u[i][2] for i in 1:n],
         [sol.u[i][3] for i in 1:n],
         [sol.u[i][4] for i in 1:n],
-        ε
+        ε,
+        diagnostics
     )
 end
 
@@ -137,7 +145,8 @@ First-order linearised outer solver (for comparison with full nonlinear).
 Solves the linearised ODE from ξ_match outward — equivalent to the O(ε³)
 term in the formal hierarchy derived by the CAS.
 """
-function solve_outer_linearised(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0)
+function solve_outer_linearised(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0,
+                                maxiters::Int=500_000)
     ε = inner.S[end] / inner.ξ[end]
 
     s_m  = _interp_val(inner.ξ, inner.S, ξ_match) - ε * ξ_match
@@ -146,7 +155,8 @@ function solve_outer_linearised(inner; ξ_match::Float64=15.0, ξ_max::Float64=8
     u_m  = _interp_val(inner.ξ, inner.U, ξ_match)
 
     prob = ODEProblem(outer_rhs!, [s_m, sp_m, spp_m, u_m], (ξ_match, ξ_max), [ε])
-    sol = solve(prob, Rodas5P(); reltol=1e-8, abstol=1e-10, maxiters=500_000)
+    sol = solve(prob, Rodas5P(); reltol=1e-8, abstol=1e-10, maxiters=maxiters)
+    diagnostics = _require_successful_solution(sol, ξ_max; context="outer linearised hierarchy solve")
 
     n = length(sol.t)
     S_lin = ε .* sol.t .+ [sol.u[i][1] for i in 1:n]
@@ -154,5 +164,5 @@ function solve_outer_linearised(inner; ξ_match::Float64=15.0, ξ_max::Float64=8
     Spp_lin = [sol.u[i][3] for i in 1:n]
     U_lin = [sol.u[i][4] for i in 1:n]
 
-    HierarchySolution(sol.t, S_lin, Sp_lin, Spp_lin, U_lin, ε)
+    HierarchySolution(sol.t, S_lin, Sp_lin, Spp_lin, U_lin, ε, diagnostics)
 end

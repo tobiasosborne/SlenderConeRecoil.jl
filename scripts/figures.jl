@@ -308,7 +308,12 @@ end
 println("Generating figures for SlenderConeRecoil...")
 println("Solving inner BVP (3D Newton with axial curvature)...")
 sol = solve_inner_bvp(ε=0.1)
-println("  Converged: ξ₀=$(round(sol.ξ₀, digits=3)), S₀=$(round(sol.S₀, digits=4))")
+if sol.converged
+    println("  Newton converged: ξ₀=$(round(sol.ξ₀, digits=3)), S₀=$(round(sol.S₀, digits=4)), residual_norm=$(round(sol.final_residual_norm, sigdigits=4))")
+else
+    println("  Newton did not meet tolerance: reason=$(sol.termination_reason), residual_norm=$(round(sol.final_residual_norm, sigdigits=4)), iterations=$(sol.iterations)")
+    println("  Continuing with diagnostic solution: ξ₀=$(round(sol.ξ₀, digits=3)), S₀=$(round(sol.S₀, digits=4))")
+end
 println()
 
 figure1(sol)

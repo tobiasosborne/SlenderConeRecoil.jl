@@ -1,5 +1,6 @@
 using Test
 using SlenderConeRecoil
+using LinearAlgebra: norm
 
 @testset "Inner BVP solver (with axial curvature)" begin
 
@@ -31,6 +32,11 @@ using SlenderConeRecoil
         sol = solve_inner_bvp(ε=0.1)
         @test sol.ξ₀ > 0
         @test sol.S₀ > 0
+        @test length(sol.final_residual) == 3
+        @test sol.final_residual_norm ≈ norm(sol.final_residual)
+        @test sol.iterations >= 0
+        @test !isempty(sol.termination_reason)
+        @test sol.converged == (sol.final_residual_norm < 1e-4)
 
         # Far-field slope near ε (with axial curvature, convergence is harder)
         slopes = SlenderConeRecoil.far_field_slope(sol)
@@ -42,6 +48,19 @@ using SlenderConeRecoil
         # Blob exists behind tip: S exceeds εξ somewhere
         excess = sol.S .- 0.1 .* sol.ξ
         @test maximum(excess) > 0.01
+    end
+
+    @testset "Newton failure diagnostics" begin
+        sol = solve_inner_bvp(ε=0.1, ξ_max=6.0, newton_iters=0)
+        @test !sol.converged
+        @test sol.iterations == 0
+        @test sol.termination_reason == "iteration limit reached"
+        @test length(sol.final_residual) == 3
+        @test sol.final_residual_norm ≈ norm(sol.final_residual)
+
+        @test_throws ErrorException solve_inner_bvp(ε=0.1, ξ_max=6.0,
+                                                    newton_iters=0,
+                                                    throw_on_failure=true)
     end
 
     @testset "ODE residual (with S''' term)" begin

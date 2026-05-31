@@ -23,7 +23,16 @@ struct InnerSolution
     ξ₀::Float64
     S₀::Float64
     Sξξ₀::Float64           # S''(ξ₀)
+    final_residual::Vector{Float64}
+    final_residual_norm::Float64
+    iterations::Int
+    converged::Bool
+    termination_reason::String
 end
+
+InnerSolution(ξ, S, Sξ, Sξξ, U, ξ₀, S₀, Sξξ₀) =
+    InnerSolution(ξ, S, Sξ, Sξξ, U, ξ₀, S₀, Sξξ₀,
+                  Float64[], NaN, 0, false, "constructed without Newton diagnostics")
 
 # ── ODE right-hand side (4-component) ──────────────────────────────────
 """
@@ -69,17 +78,30 @@ function tip_initial_conditions(ξ₀::Float64, S₀::Float64, Sξξ₀::Float64
 end
 
 # ── Single-shot integration ───────────────────────────────────────────
-function _shoot(ξ₀, S₀, Sξξ₀, ξ_max)
+function _shoot_with_diagnostics(ξ₀, S₀, Sξξ₀, ξ_max;
+                                 maxiters::Int=2_000_000,
+                                 context::AbstractString="inner shooting")
     u0 = tip_initial_conditions(ξ₀, S₀, Sξξ₀)
     prob = ODEProblem(inner_rhs!, u0, (ξ₀ + 1e-6, ξ_max))
     # Use stiff solver — S''' term produces rapid oscillations
-    sol = solve(prob, Rodas5P(); reltol=1e-8, abstol=1e-10, maxiters=2_000_000)
+    sol = solve(prob, Rodas5P(); reltol=1e-8, abstol=1e-10, maxiters=maxiters)
+    diagnostics = _require_successful_solution(sol, ξ_max; context=context)
     ξ_vals = sol.t
     S_vals = [sol.u[i][1] for i in eachindex(sol.u)]
     Sp_vals = [sol.u[i][2] for i in eachindex(sol.u)]
     Spp_vals = [sol.u[i][3] for i in eachindex(sol.u)]
     U_vals = [sol.u[i][4] for i in eachindex(sol.u)]
+    (ξ_vals, S_vals, Sp_vals, Spp_vals, U_vals, diagnostics)
+end
+
+function _shoot(ξ₀, S₀, Sξξ₀, ξ_max; maxiters::Int=2_000_000)
+    ξ_vals, S_vals, Sp_vals, Spp_vals, U_vals, _ =
+        _shoot_with_diagnostics(ξ₀, S₀, Sξξ₀, ξ_max; maxiters=maxiters)
     (ξ_vals, S_vals, Sp_vals, Spp_vals, U_vals)
+end
+
+function _inner_failure_message(reason, iterations, residual, residual_norm)
+    "inner Newton failed: $reason after $iterations iteration(s); residual_norm=$residual_norm; residual=$residual"
 end
 
 # ── 3D Newton shooting ────────────────────────────────────────────────
@@ -94,18 +116,38 @@ Solve the inner BVP by 3D Newton shooting over (ξ₀, S₀, S''₀) matching:
 """
 function solve_inner_bvp(; ξ₀::Float64=2.79, S₀::Float64=0.28, Sξξ₀::Float64=0.57,
                            ξ_max::Float64=60.0, ε::Float64=0.1,
-                           newton_iters::Int=30, newton_tol::Float64=1e-4)
+                           newton_iters::Int=30, newton_tol::Float64=1e-4,
+                           ode_maxiters::Int=2_000_000,
+                           throw_on_failure::Bool=false)
     function residual(x)
-        ξv, Sv, _, Sppv, Uv = _shoot(x[1], x[2], x[3], ξ_max)
+        ξv, Sv, _, Sppv, Uv =
+            _shoot(x[1], x[2], x[3], ξ_max; maxiters=ode_maxiters)
         [Sv[end] / ξv[end] - ε, Uv[end], Sppv[end]]
     end
 
     x = [ξ₀, S₀, Sξξ₀]
     δ = 1e-5
+    final_residual = residual(x)
+    final_norm = norm(final_residual)
+    iterations = 0
+    converged = final_norm < newton_tol
+    termination_reason = converged ? "residual tolerance reached" : "iteration limit reached"
 
-    for _ in 1:newton_iters
+    for iter in 1:newton_iters
         F = residual(x)
-        norm(F) < newton_tol && break
+        F_norm = norm(F)
+        final_residual = F
+        final_norm = F_norm
+        iterations = iter - 1
+        if F_norm < newton_tol
+            converged = true
+            termination_reason = "residual tolerance reached"
+            break
+        end
+        if !all(isfinite, F)
+            termination_reason = "non-finite residual"
+            break
+        end
 
         # 3x3 finite-difference Jacobian
         J = zeros(3, 3)
@@ -114,28 +156,77 @@ function solve_inner_bvp(; ξ₀::Float64=2.79, S₀::Float64=0.28, Sξξ₀::Fl
             xp[j] += δ
             J[:, j] = (residual(xp) - F) / δ
         end
-        abs(det(J)) < 1e-20 && break
+        if !all(isfinite, J)
+            termination_reason = "non-finite finite-difference Jacobian"
+            break
+        end
+        if abs(det(J)) < 1e-20
+            termination_reason = "near-singular finite-difference Jacobian"
+            break
+        end
 
         step = J \ F
+        if !all(isfinite, step)
+            termination_reason = "non-finite Newton step"
+            break
+        end
 
         # Damped Newton: reduce step until residual decreases
         α = 1.0
-        x_trial = x .- α .* step
+        accepted = false
+        accepted_residual = F
+        accepted_norm = F_norm
+        x_trial = copy(x)
         for _ in 1:10
+            x_trial = x .- α .* step
             x_trial[1] = max(0.1, x_trial[1])
             x_trial[2] = max(0.01, x_trial[2])
             F_trial = residual(x_trial)
-            norm(F_trial) < norm(F) && break
+            F_trial_norm = norm(F_trial)
+            if all(isfinite, F_trial) && F_trial_norm < F_norm
+                accepted = true
+                accepted_residual = F_trial
+                accepted_norm = F_trial_norm
+                break
+            end
             α *= 0.5
-            x_trial = x .- α .* step
         end
+
+        if !accepted
+            termination_reason = "line search failed to reduce residual"
+            break
+        end
+
         x .= x_trial
-        x[1] = max(0.1, x[1])
-        x[2] = max(0.01, x[2])
+        final_residual = accepted_residual
+        final_norm = accepted_norm
+        iterations = iter
+        if final_norm < newton_tol
+            converged = true
+            termination_reason = "residual tolerance reached"
+            break
+        end
     end
 
-    ξv, Sv, Spv, Sppv, Uv = _shoot(x[1], x[2], x[3], ξ_max)
-    InnerSolution(ξv, Sv, Spv, Sppv, Uv, x[1], x[2], x[3])
+    if !converged
+        final_residual = residual(x)
+        final_norm = norm(final_residual)
+        if final_norm < newton_tol
+            converged = true
+            termination_reason = "residual tolerance reached"
+        elseif throw_on_failure
+            error(_inner_failure_message(termination_reason, iterations,
+                                         final_residual, final_norm))
+        end
+    end
+
+    ξv, Sv, Spv, Sppv, Uv, _ =
+        _shoot_with_diagnostics(x[1], x[2], x[3], ξ_max;
+                                maxiters=ode_maxiters,
+                                context="inner final shooting")
+    InnerSolution(ξv, Sv, Spv, Sppv, Uv, x[1], x[2], x[3],
+                  final_residual, final_norm, iterations, converged,
+                  termination_reason)
 end
 
 # ── Far-field diagnostics ──────────────────────────────────────────────

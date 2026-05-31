@@ -24,7 +24,12 @@ struct OuterSolution
     s₁ξξ::Vector{Float64}    # s₁''
     u₁::Vector{Float64}      # perturbation velocity
     ε::Float64
+    diagnostics::NamedTuple
 end
+
+OuterSolution(ξ, s₁, s₁ξ, s₁ξξ, u₁, ε) =
+    OuterSolution(ξ, s₁, s₁ξ, s₁ξξ, u₁, ε,
+                  _manual_solution_diagnostics("OuterSolution constructed directly", ξ))
 
 # ── Linearised ODE (4-component with S''') ─────────────────────────────
 """
@@ -73,7 +78,7 @@ At ξ_max, all perturbations are zero (unperturbed cone) except a small
 seed to excite the decaying modes.
 """
 function solve_outer(; ε::Float64=0.1, ξ_min::Float64=3.0, ξ_max::Float64=50.0,
-                      seed::Float64=0.0)
+                      seed::Float64=0.0, maxiters::Int=500_000)
     # Initial condition at ξ_max: small perturbation
     y0 = [seed, 0.0, 0.0, 0.0]
     tspan = (ξ_max, ξ_min)  # integrate inward
@@ -81,7 +86,8 @@ function solve_outer(; ε::Float64=0.1, ξ_min::Float64=3.0, ξ_max::Float64=50.
 
     prob = ODEProblem(outer_rhs!, y0, tspan, p)
     sol = solve(prob, Rodas5P(); reltol=1e-8, abstol=1e-10,
-                maxiters=500_000)
+                maxiters=maxiters)
+    diagnostics = _require_successful_solution(sol, ξ_min; context="outer inward solve")
 
     ξ_vals = reverse(sol.t)
     s₁_vals = reverse([sol.u[i][1] for i in eachindex(sol.u)])
@@ -89,11 +95,12 @@ function solve_outer(; ε::Float64=0.1, ξ_min::Float64=3.0, ξ_max::Float64=50.
     s₁pp_vals = reverse([sol.u[i][3] for i in eachindex(sol.u)])
     u₁_vals = reverse([sol.u[i][4] for i in eachindex(sol.u)])
 
-    OuterSolution(ξ_vals, s₁_vals, s₁p_vals, s₁pp_vals, u₁_vals, ε)
+    OuterSolution(ξ_vals, s₁_vals, s₁p_vals, s₁pp_vals, u₁_vals, ε, diagnostics)
 end
 
-function solve_outer_driven(; ε::Float64=0.1, ξ_min::Float64=3.0, ξ_max::Float64=50.0)
-    solve_outer(ε=ε, ξ_min=ξ_min, ξ_max=ξ_max, seed=ε^2)
+function solve_outer_driven(; ε::Float64=0.1, ξ_min::Float64=3.0, ξ_max::Float64=50.0,
+                             maxiters::Int=500_000)
+    solve_outer(ε=ε, ξ_min=ξ_min, ξ_max=ξ_max, seed=ε^2, maxiters=maxiters)
 end
 
 """
@@ -105,7 +112,8 @@ solution at ξ_match and integrating the linearised ODE *outward* from there.
 This is the physically correct matching: the inner solution's far-field
 oscillatory/decaying behavior seeds the outer solution.
 """
-function solve_outer_matched(inner; ξ_match::Float64=15.0, ξ_max::Float64=100.0)
+function solve_outer_matched(inner; ξ_match::Float64=15.0, ξ_max::Float64=100.0,
+                             maxiters::Int=500_000)
     ε = inner.S[end] / inner.ξ[end]  # estimate ε from far-field slope
 
     # Interpolate inner state at matching point
@@ -119,7 +127,8 @@ function solve_outer_matched(inner; ξ_match::Float64=15.0, ξ_max::Float64=100.
     p = [ε]
 
     prob = ODEProblem(outer_rhs!, y0, tspan, p)
-    sol = solve(prob, Rodas5P(); reltol=1e-8, abstol=1e-10, maxiters=500_000)
+    sol = solve(prob, Rodas5P(); reltol=1e-8, abstol=1e-10, maxiters=maxiters)
+    diagnostics = _require_successful_solution(sol, ξ_max; context="outer matched solve")
 
     ξ_vals = sol.t
     s₁_vals = [sol.u[i][1] for i in eachindex(sol.u)]
@@ -127,7 +136,7 @@ function solve_outer_matched(inner; ξ_match::Float64=15.0, ξ_max::Float64=100.
     s₁pp_vals = [sol.u[i][3] for i in eachindex(sol.u)]
     u₁_vals = [sol.u[i][4] for i in eachindex(sol.u)]
 
-    OuterSolution(ξ_vals, s₁_vals, s₁p_vals, s₁pp_vals, u₁_vals, ε)
+    OuterSolution(ξ_vals, s₁_vals, s₁p_vals, s₁pp_vals, u₁_vals, ε, diagnostics)
 end
 
 # Simple linear interpolation for a single point

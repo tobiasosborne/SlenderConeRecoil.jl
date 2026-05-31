@@ -9,8 +9,23 @@ using SlenderConeRecoil
         sol = solve_outer(ε=0.1, ξ_min=5.0, ξ_max=50.0, seed=0.0)
         @test sol isa OuterSolution
         @test length(sol.ξ) > 5
+        @test sol.diagnostics.requested_endpoint ≈ 5.0
+        @test sol.diagnostics.endpoint ≈ 5.0
         @test all(isfinite, sol.s₁)
         @test all(isfinite, sol.u₁)
+    end
+
+    @testset "Solver retcode failure is reported" begin
+        err = @test_logs (:warn, r"max_iters") begin
+            try
+                solve_outer(ε=0.1, ξ_min=2.0, ξ_max=50.0, maxiters=1)
+                nothing
+            catch e
+                e
+            end
+        end
+        @test err isa ErrorException
+        @test occursin("retcode", sprint(showerror, err))
     end
 
     @testset "Integration direction (inward)" begin

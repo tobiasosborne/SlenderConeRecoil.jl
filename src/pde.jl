@@ -20,7 +20,12 @@ struct PDESolution
     R::Vector{Vector{Float64}}   # R[i] = R(z, t_snapshots[i])
     u::Vector{Vector{Float64}}   # u[i] = u(z, t_snapshots[i])
     ε::Float64
+    diagnostics::NamedTuple
 end
+
+PDESolution(z, t_snapshots, R, u, ε) =
+    PDESolution(z, t_snapshots, R, u, ε,
+                _manual_solution_diagnostics("PDESolution constructed directly", t_snapshots))
 
 # ── Grid construction ──────────────────────────────────────────────────
 """
@@ -112,7 +117,7 @@ Solve the 1D slender model PDE using method of lines.
 """
 function solve_pde(; ε::Float64=0.1, N::Int=200, z_min::Float64=0.01,
                     z_max::Float64=10.0, t_end::Float64=1.0,
-                    n_snapshots::Int=10)
+                    n_snapshots::Int=10, maxiters::Int=1_000_000)
     z = stretched_grid(N, z_min, z_max)
 
     # Initial conditions: R = εz, u = 0
@@ -138,14 +143,17 @@ function solve_pde(; ε::Float64=0.1, N::Int=200, z_min::Float64=0.01,
     # Use implicit solver — capillary pressure makes the system stiff.
     # Use finite-diff Jacobian since RHS uses pre-allocated Float64 buffers.
     sol = solve(prob, FBDF(autodiff=false); reltol=1e-6, abstol=1e-8,
-                saveat=t_save, maxiters=1_000_000)
+                saveat=t_save, maxiters=maxiters)
+    diagnostics = _require_successful_solution(sol, t_end;
+                                               context="PDE method-of-lines solve",
+                                               expected_times=t_save)
 
     # Extract snapshots
     t_out = sol.t
     R_snapshots = [sol.u[i][1:N] for i in eachindex(sol.u)]
     u_snapshots = [sol.u[i][N+1:2N] for i in eachindex(sol.u)]
 
-    PDESolution(z, t_out, R_snapshots, u_snapshots, ε)
+    PDESolution(z, t_out, R_snapshots, u_snapshots, ε, diagnostics)
 end
 
 # ── Rescale to similarity variables ────────────────────────────────────

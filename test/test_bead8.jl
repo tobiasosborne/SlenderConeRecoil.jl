@@ -45,6 +45,9 @@ using SlenderConeRecoil
         @test length(pde.z) == 50
         @test length(pde.t_snapshots) ≥ 2
         @test length(pde.R) == length(pde.t_snapshots)
+        @test pde.diagnostics.requested_endpoint ≈ 0.01
+        @test pde.diagnostics.endpoint ≈ 0.01
+        @test pde.diagnostics.saved_points == length(pde.t_snapshots)
     end
 
     @testset "Initial condition preserved at t≈0" begin
