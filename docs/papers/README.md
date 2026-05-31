@@ -15,13 +15,13 @@ sha256sum docs/papers/<file>
 | Local status | Expected local filename | Citation | DOI / URL | Access notes | SHA-256 |
 | --- | --- | --- | --- | --- | --- |
 | Missing as of 2026-06-01 | `DecentKing2008_IMAJAM_73_1_37-68_hxm043.pdf` | S. P. Decent and A. C. King, "Surface-tension-driven flow in a slender cone," *IMA Journal of Applied Mathematics* **73**(1), 37--68, 2008. | DOI [`10.1093/imamat/hxm043`](https://doi.org/10.1093/imamat/hxm043) | Primary target for source-fidelity work. Published online in 2007 and in the February 2008 issue. Requires publisher/institutional access unless open via OUP. | TODO once acquired locally |
-| Present locally; ignored | `Billingham1999_JFM_397_45.pdf` | J. Billingham, "Surface-tension-driven flow in fat fluid wedges and cones," *Journal of Fluid Mechanics* **397**, 45--71, 1999. | DOI [`10.1017/S0022112099006011`](https://doi.org/10.1017/S0022112099006011) | Local copy should be treated as licensed publisher content. | `a4c99bd1dff44abcccd2c8cbce1f6bfa0cf6817ffbf53cb62b607838f61e88ef` |
-| Present locally; ignored | `DecentKing2001_IUTAM.pdf` | S. P. Decent and A. C. King, "The Recoil of A Broken Liquid Bridge," in *IUTAM Symposium on Free Surface Flows*, Springer, 2001. | DOI [`10.1007/978-94-010-0796-2_4`](https://doi.org/10.1007/978-94-010-0796-2_4) | Local copy is a large Springer proceedings PDF; verify page/chapter extraction before using for source-backed tests. | `efd95dddbb6571ce324a3115a2812df37c3265d296d4818f96d8c804fa7ab524` |
+| Missing as of 2026-06-01 | `Billingham1999_JFM_397_45.pdf` | J. Billingham, "Surface-tension-driven flow in fat fluid wedges and cones," *Journal of Fluid Mechanics* **397**, 45--71, 1999. | DOI [`10.1017/S0022112099006047`](https://doi.org/10.1017/S0022112099006047) | Cambridge metadata reports this DOI. The previous local file with this filename was a different JFM paper and has been quarantined below. | TODO once acquired locally |
+| Present locally; ignored | `DecentKing2001_IUTAM.pdf` | S. P. Decent and A. C. King, "The Recoil of A Broken Liquid Bridge," in *IUTAM Symposium on Free Surface Flows*, Springer, 2001. | DOI [`10.1007/978-94-010-0796-2_10`](https://doi.org/10.1007/978-94-010-0796-2_10) | Local copy is a large Springer proceedings PDF; the relevant chapter is pp. 81--88. Verify extraction before using for source-backed tests. | `efd95dddbb6571ce324a3115a2812df37c3265d296d4818f96d8c804fa7ab524` |
 | Present locally; ignored | `Eggers1997_RMP_69_865.pdf` | J. Eggers, "Nonlinear dynamics and breakup of free-surface flows," *Reviews of Modern Physics* **69**, 865--929, 1997. | DOI [`10.1103/RevModPhys.69.865`](https://doi.org/10.1103/RevModPhys.69.865) | Local APS review copy; use for contextual literature, not Decent--King benchmarks. | `7e5afdd865742d778c7955b359ae53e3a4dd48b77820cc4c91ca774d94349685` |
 | Present locally; ignored | `KellerMiksis1983_SIAMJAM_43_268.pdf` | J. B. Keller and M. J. Miksis, "Surface tension driven flows," *SIAM Journal on Applied Mathematics* **43**(2), 268--277, 1983. | DOI [`10.1137/0143018`](https://doi.org/10.1137/0143018) | Local SIAM copy; source for the `t^(2/3)` similarity scaling. | `2942ea6bdddd6f8a2bb2c5735363f4208de1850f3e111b329f72e9cf12f89a21` |
-| PDF missing; page image present | `KellerKingTing1995_PoF_7_226.pdf` | J. B. Keller, A. C. King, and L. Ting, "Blob formation," *Physics of Fluids* **7**(1), 226--228, 1995. | DOI [`10.1063/1.868513`](https://doi.org/10.1063/1.868513) | Only `KellerKingTing1995_page.png` is currently present. Acquire and checksum the PDF before citing quantitative details. | TODO once acquired locally |
+| PDF missing; page image present | `KellerKingTing1995_PoF_7_226.pdf` | J. B. Keller, A. C. King, and L. Ting, "Blob formation," *Physics of Fluids* **7**(1), 226--228, 1995. | DOI [`10.1063/1.868723`](https://doi.org/10.1063/1.868723) | Only `KellerKingTing1995_page.png` is currently present. Acquire and checksum the PDF before citing quantitative details. | TODO once acquired locally |
 
-## Quarantined Mislabeled Artifact
+## Quarantined Mislabeled Artifacts
 
 The file previously named `DecentKing2008_QJMAM_61_1.pdf` was not the
 Decent--King cone paper. It was renamed locally with:
@@ -30,9 +30,17 @@ Decent--King cone paper. It was renamed locally with:
 mv -f docs/papers/DecentKing2008_QJMAM_61_1.pdf docs/papers/NOT_DecentKing_PrestonJensenRichardson2008_QJMAM_61_1_hbm021.pdf
 ```
 
+The file previously named `Billingham1999_JFM_397_45.pdf` was not the
+Billingham fat-wedge/cone paper. It was renamed locally with:
+
+```bash
+mv -f docs/papers/Billingham1999_JFM_397_45.pdf docs/papers/NOT_Billingham_ChenChen1999_JFM_395_327_S0022112099006011.pdf
+```
+
 | Local filename | Actual metadata | DOI / URL | Why quarantined | SHA-256 |
 | --- | --- | --- | --- | --- |
 | `NOT_DecentKing_PrestonJensenRichardson2008_QJMAM_61_1_hbm021.pdf` | S. P. Preston, O. E. Jensen, and G. Richardson, "Buckling of an axisymmetric vesicle under compression: the effects of resistance to shear," *The Quarterly Journal of Mechanics and Applied Mathematics* **61**(1), 1--24, 2008. | DOI [`10.1093/qjmam/hbm021`](https://doi.org/10.1093/qjmam/hbm021) | It is a vesicle-compression paper, not a slender-cone recoil paper. Keep it quarantined or remove the local copy. | `8ebdf98aa7593bd04a16d078e7aaf94477451474f34730f222d2fc71792fa52e` |
+| `NOT_Billingham_ChenChen1999_JFM_395_327_S0022112099006011.pdf` | W.-Y. Chen and C. F. Chen, "Effect of gravity modulation on the stability of convection in a vertical slot," *Journal of Fluid Mechanics* **395**, 327--344, 1999. | DOI [`10.1017/S0022112099006011`](https://doi.org/10.1017/S0022112099006011) | It is a gravity-modulated convection paper, not Billingham's fat wedge/cone paper. Keep it quarantined or remove the local copy. | `a4c99bd1dff44abcccd2c8cbce1f6bfa0cf6817ffbf53cb62b607838f61e88ef` |
 
 The previously cited DOI `10.1093/qjmam/hbm028` is also not the cone paper.
 Crossref/OUP metadata identify it as M. H. B. M. Shariff, "Nonlinear

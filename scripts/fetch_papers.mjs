@@ -39,9 +39,9 @@ const PAPERS = [
   {
     label: 'Billingham1999',
     desc: 'Billingham 1999 — fat cone with Hankel-Laplace',
-    abstractUrl: 'https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/surfacetensiondriven-flow-in-fat-fluid-wedges-and-cones/3B7A8E5B8E5E5E5E5E5E5E5E5E5E5E5E',
+    abstractUrl: 'https://www.cambridge.org/core/journals/journal-of-fluid-mechanics/article/surfacetensiondriven-flow-in-fat-fluid-wedges-and-cones/47EE570853A6F2CCA2848E3B17C8B5A8',
     pdfUrl: null, // will resolve via DOI
-    doiFallback: '10.1017/S0022112099006011',
+    doiFallback: '10.1017/S0022112099006047',
     file: 'Billingham1999_JFM_397_45.pdf',
     domain: 'cambridge',
   },
@@ -59,7 +59,7 @@ const PAPERS = [
     desc: 'Keller, King & Ting 1995 — blob formation',
     abstractUrl: 'https://pubs.aip.org/aip/pof/article-abstract/7/1/226/262287',
     pdfUrl: null, // will resolve via DOI
-    doiFallback: '10.1063/1.868513',
+    doiFallback: '10.1063/1.868723',
     file: 'KellerKingTing1995_PoF_7_226.pdf',
     domain: 'aip',
   },
@@ -68,7 +68,7 @@ const PAPERS = [
     label: 'DecentKing2001',
     desc: 'Decent & King 2001 — conference proceedings, recoil of broken liquid bridge',
     pdfUrl: null,
-    doiFallback: '10.1007/978-94-010-0796-2_4',
+    doiFallback: '10.1007/978-94-010-0796-2_10',
     file: 'DecentKing2001_IUTAM.pdf',
     domain: 'springer',
   },
