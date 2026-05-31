@@ -38,4 +38,5 @@ end
     include("test_outer_hierarchy.jl")
     include("test_bead7.jl")
     include("test_bead8.jl")
+    include("test_numerical_regressions.jl")
 end
