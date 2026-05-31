@@ -1,6 +1,10 @@
 using Test
 using SlenderConeRecoil
 
+_pde_rhs_params(z) = (length(z), z,
+                      zeros(length(z)), zeros(length(z)), zeros(length(z)),
+                      zeros(length(z)), zeros(length(z)), zeros(length(z)))
+
 @testset "Time-dependent PDE" begin
 
     @testset "Stretched grid" begin
@@ -12,6 +16,16 @@ using SlenderConeRecoil
         @test all(diff(z) .> 0)
         # Grid should be finer near the left (tip)
         @test z[2] - z[1] < z[end] - z[end-1]
+    end
+
+    @testset "Stretched grid validation" begin
+        @test_throws ArgumentError SlenderConeRecoil.stretched_grid(2, 0.01, 10.0)
+        @test_throws ArgumentError SlenderConeRecoil.stretched_grid(3, NaN, 10.0)
+        @test_throws ArgumentError SlenderConeRecoil.stretched_grid(3, 0.01, Inf)
+        @test_throws ArgumentError SlenderConeRecoil.stretched_grid(3, 1.0, 1.0)
+        @test_throws ArgumentError SlenderConeRecoil.stretched_grid(3, 2.0, 1.0)
+        @test_throws ArgumentError SlenderConeRecoil.stretched_grid(3, 0.01, 10.0; β=0.0)
+        @test_throws ArgumentError SlenderConeRecoil.stretched_grid(3, 0.01, 10.0; β=Inf)
     end
 
     @testset "Finite differences (uniform grid)" begin
@@ -35,6 +49,79 @@ using SlenderConeRecoil
         for i in 5:95
             @test abs(df[i] - cos(z[i])) < 0.01
         end
+    end
+
+    @testset "Finite difference validation" begin
+        z = [0.0, 1.0, 2.0]
+        f = [0.0, 1.0, 4.0]
+        df = zeros(3)
+
+        @test_throws ArgumentError SlenderConeRecoil.ddz!(zeros(2), f, z)
+        @test_throws ArgumentError SlenderConeRecoil.ddz!(df, zeros(2), z)
+        @test_throws ArgumentError SlenderConeRecoil.ddz!(zeros(2), zeros(2), [0.0, 1.0])
+        @test_throws ArgumentError SlenderConeRecoil.ddz!(df, f, [0.0, NaN, 2.0])
+        @test_throws ArgumentError SlenderConeRecoil.ddz!(df, f, [0.0, 1.0, 1.0])
+        @test_throws ArgumentError SlenderConeRecoil.ddz!(df, f, [0.0, 2.0, 1.0])
+    end
+
+    @testset "PDE RHS boundary conditions" begin
+        z = collect(range(1.0, 2.0, length=6))
+        N = length(z)
+        R = 0.2 .+ 0.1 .* z
+        u = sin.(z)
+        w = vcat(R, u)
+        dw = fill(NaN, 2N)
+
+        SlenderConeRecoil.pde_rhs!(dw, w, _pde_rhs_params(z), 0.0)
+
+        @test all(isfinite, dw)
+        @test dw[1] == 0.0
+        @test dw[N+1] == 0.0
+        @test dw[N] == dw[N-1]
+        @test dw[2N] == dw[2N-1]
+    end
+
+    @testset "PDE RHS validation" begin
+        z = collect(range(1.0, 2.0, length=5))
+        N = length(z)
+        R = 0.2 .+ 0.1 .* z
+        u = zeros(N)
+        w = vcat(R, u)
+        dw = zeros(2N)
+        p = _pde_rhs_params(z)
+
+        @test_throws ArgumentError SlenderConeRecoil.pde_rhs!(zeros(2N - 1), w, p, 0.0)
+        @test_throws ArgumentError SlenderConeRecoil.pde_rhs!(dw, w[1:end-1], p, 0.0)
+
+        w_bad_radius = copy(w)
+        w_bad_radius[3] = 0.0
+        @test_throws DomainError SlenderConeRecoil.pde_rhs!(dw, w_bad_radius, p, 0.0)
+
+        w_bad_velocity = copy(w)
+        w_bad_velocity[N+2] = NaN
+        @test_throws DomainError SlenderConeRecoil.pde_rhs!(dw, w_bad_velocity, p, 0.0)
+
+        p_bad_grid = _pde_rhs_params([1.0, 1.5, 1.5, 1.75, 2.0])
+        @test_throws ArgumentError SlenderConeRecoil.pde_rhs!(dw, w, p_bad_grid, 0.0)
+    end
+
+    @testset "PDE solver input validation" begin
+        @test_throws ArgumentError solve_pde(ε=0.0, N=10, z_min=1.0, z_max=2.0,
+                                             t_end=0.001, n_snapshots=1)
+        @test_throws ArgumentError solve_pde(ε=NaN, N=10, z_min=1.0, z_max=2.0,
+                                             t_end=0.001, n_snapshots=1)
+        @test_throws ArgumentError solve_pde(ε=0.1, N=2, z_min=1.0, z_max=2.0,
+                                             t_end=0.001, n_snapshots=1)
+        @test_throws ArgumentError solve_pde(ε=0.1, N=10, z_min=2.0, z_max=1.0,
+                                             t_end=0.001, n_snapshots=1)
+        @test_throws ArgumentError solve_pde(ε=0.1, N=10, z_min=1.0, z_max=2.0,
+                                             t_end=-0.001, n_snapshots=1)
+        @test_throws ArgumentError solve_pde(ε=0.1, N=10, z_min=1.0, z_max=2.0,
+                                             t_end=Inf, n_snapshots=1)
+        @test_throws ArgumentError solve_pde(ε=0.1, N=10, z_min=1.0, z_max=2.0,
+                                             t_end=0.001, n_snapshots=0)
+        @test_throws ArgumentError solve_pde(ε=0.1, N=10, z_min=0.0, z_max=1.0,
+                                             t_end=0.001, n_snapshots=1)
     end
 
     @testset "PDE solver runs" begin
