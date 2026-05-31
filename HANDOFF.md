@@ -53,7 +53,8 @@ Do not run multiple Julia package, precompile, or test jobs concurrently in
 this project environment. Use the `all` group when both gates are needed.
 Figure generation saves both PDF and PNG for every tracked figure stem and
 records parameters, package version, git commit, Julia version, and solver
-diagnostics in `figures/metadata.toml`.
+diagnostics in `figures/metadata.toml`. The figure binaries and metadata file
+are tracked reproducibility artifacts.
 
 ## Key files
 | File | LOC | Purpose |

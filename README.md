@@ -98,7 +98,8 @@ slow, or individual Julia test jobs can race with each other.
 
 Figure generation writes both PDF and PNG versions of each tracked plot from
 the same plot object and records the solver/environment metadata in
-`figures/metadata.toml`.
+`figures/metadata.toml`. The figure binaries and metadata file are tracked
+reproducibility artifacts.
 
 ## File map
 
