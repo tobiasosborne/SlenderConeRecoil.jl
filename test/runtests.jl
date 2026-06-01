@@ -3,6 +3,7 @@ using SlenderConeRecoil
 
 const TEST_GROUP = lowercase(get(ENV, "SLENDER_RECOIL_TEST_GROUP", "fast"))
 const FAST_TEST_FILES = (
+    "test_public_api_wrappers.jl",
     "test_bead1.jl",
     "test_bead2.jl",
     "test_bead3.jl",
@@ -48,6 +49,12 @@ end
         :derive_outer_equations, :eval_sexpr, :solve_outer_full,
         :solve_outer_linearised, :HierarchySolution,
         :solve_pde, :PDESolution, :rescale_to_similarity,
+        :AbstractRecoilProblem,
+        :ConeSimilarityProblem, :OuterMatchingProblem,
+        :CompositeProfileProblem, :PDEVerificationProblem,
+        :ProblemResult,
+        :ConeSimilarityResult, :OuterMatchingResult,
+        :CompositeProfileResult, :PDEVerificationResult,
     )
 
     exported = names(SlenderConeRecoil)

@@ -10,5 +10,6 @@ include("outer.jl")
 include("composite.jl")
 include("outer_hierarchy.jl")
 include("pde.jl")
+include("api.jl")
 
 end # module
