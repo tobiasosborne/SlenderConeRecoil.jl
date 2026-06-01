@@ -5,6 +5,47 @@ _pde_rhs_params(z) = (length(z), z,
                       zeros(length(z)), zeros(length(z)), zeros(length(z)),
                       zeros(length(z)), zeros(length(z)), zeros(length(z)))
 
+# Manufactured profile for operator verification only. This is not cone
+# benchmark data and should not be used as a physical reference solution.
+function _mms_pde_profile(z)
+    R = @. 1.4 + 0.08*sin(1.7*z) + 0.05*cos(2.3*z)
+    u = @. 0.2*cos(1.1*z) + 0.07*sin(2.9*z)
+    Rz = @. 0.08*1.7*cos(1.7*z) - 0.05*2.3*sin(2.3*z)
+    uz = @. -0.2*1.1*sin(1.1*z) + 0.07*2.9*cos(2.9*z)
+    invR_z = @. -Rz / R^2
+    Rzzz = @. -0.08*1.7^3*cos(1.7*z) + 0.05*2.3^3*sin(2.3*z)
+    Rt = @. -u*Rz - 0.5*R*uz
+    ut = @. -u*uz - invR_z + Rzzz
+    (R=R, u=u, Rt=Rt, ut=ut)
+end
+
+function _mms_pde_rhs_error(z; margin=8)
+    N = length(z)
+    N > 2margin + 1 || throw(ArgumentError("MMS grid too small for margin=$margin"))
+
+    mms = _mms_pde_profile(z)
+    w = vcat(mms.R, mms.u)
+    dw = fill(NaN, 2N)
+    SlenderConeRecoil.pde_rhs!(dw, w, _pde_rhs_params(z), 0.0)
+
+    interior = (margin+1):(N-margin)
+    velocity_interior = (N + margin + 1):(2N - margin)
+    radius_error = maximum(abs.(dw[interior] .- mms.Rt[interior]))
+    velocity_error = maximum(abs.(dw[velocity_interior] .- mms.ut[interior]))
+    (radius_error=radius_error,
+     velocity_error=velocity_error,
+     max_error=max(radius_error, velocity_error),
+     h=maximum(diff(z)),
+     left_radius_bc=dw[1],
+     left_velocity_bc=dw[N+1],
+     right_radius_bc_delta=dw[N] - dw[N-1],
+     right_velocity_bc_delta=dw[2N] - dw[2N-1])
+end
+
+_observed_order(coarse, fine, component::Symbol) =
+    log(getproperty(coarse, component) / getproperty(fine, component)) /
+    log(coarse.h / fine.h)
+
 @testset "Time-dependent PDE" begin
 
     @testset "Stretched grid" begin
@@ -79,6 +120,40 @@ _pde_rhs_params(z) = (length(z), z,
         @test dw[N+1] == 0.0
         @test dw[N] == dw[N-1]
         @test dw[2N] == dw[2N-1]
+    end
+
+    @testset "PDE RHS manufactured-solution convergence" begin
+        cases = (
+            (:uniform, N -> collect(range(0.2, 2.6, length=N))),
+            (:stretched, N -> SlenderConeRecoil.stretched_grid(N, 0.2, 2.6; β=1.7)),
+        )
+
+        for (name, make_grid) in cases
+            @testset "$name grid" begin
+                errors = [_mms_pde_rhs_error(make_grid(N)) for N in (65, 129, 257)]
+
+                for err in errors
+                    @test isfinite(err.radius_error)
+                    @test isfinite(err.velocity_error)
+                    @test err.left_radius_bc == 0.0
+                    @test err.left_velocity_bc == 0.0
+                    @test err.right_radius_bc_delta == 0.0
+                    @test err.right_velocity_bc_delta == 0.0
+                end
+
+                radius_orders = [_observed_order(errors[i], errors[i+1], :radius_error)
+                                 for i in 1:(length(errors)-1)]
+                velocity_orders = [_observed_order(errors[i], errors[i+1], :velocity_error)
+                                   for i in 1:(length(errors)-1)]
+
+                @test minimum(radius_orders) > 1.75
+                @test minimum(velocity_orders) > 1.85
+                @test radius_orders[end] > 1.9
+                @test velocity_orders[end] > 1.9
+                @test errors[end].radius_error < 8e-5
+                @test errors[end].velocity_error < 5e-4
+            end
+        end
     end
 
     @testset "PDE RHS validation" begin
