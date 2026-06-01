@@ -14,5 +14,6 @@ include("provenance.jl")
 include("diagnostics.jl")
 include("bvp_residuals.jl")
 include("api.jl")
+include("collocation.jl")
 
 end # module

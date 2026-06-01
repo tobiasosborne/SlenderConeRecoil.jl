@@ -366,6 +366,8 @@ function _default_solver_algorithm(kind::Symbol)
         return "Newton shooting with Rodas5P IVP integrations"
     kind === :inner_bvp_residual &&
         return "Rodas5P endpoint shooting residual"
+    kind === :inner_bvp_collocation &&
+        return "shooting-seeded midpoint collocation Newton solve"
     kind === :outer_matching &&
         return "matched outward Rodas5P integration of reconstructed linearised outer ODE"
     kind === :composite_profile &&
