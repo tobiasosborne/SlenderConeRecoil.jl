@@ -15,5 +15,6 @@ include("diagnostics.jl")
 include("bvp_residuals.jl")
 include("api.jl")
 include("collocation.jl")
+include("continuation.jl")
 
 end # module
