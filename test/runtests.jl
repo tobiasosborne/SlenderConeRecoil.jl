@@ -66,6 +66,7 @@ end
         :solve_outer_linearised, :HierarchySolution,
         :solve_pde, :PDESolution, :rescale_to_similarity,
         :pde_conservation_diagnostics,
+        :similarity_collapse_diagnostics,
         :AbstractRecoilProblem,
         :ConeSimilarityProblem, :OuterMatchingProblem,
         :CompositeProfileProblem, :PDEVerificationProblem,

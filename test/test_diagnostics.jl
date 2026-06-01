@@ -117,6 +117,11 @@ end
     @test pde_result.diagnostics.initial_area_mass ≈
           pde_result.diagnostics.final_area_mass
     @test pde_result.diagnostics.max_abs_area_mass_balance_residual == 0.0
+    @test haskey(pde_result.solution.diagnostics, :similarity_collapse)
+    @test pde_result.diagnostics.similarity_collapse_status ==
+          :insufficient_snapshots
+    @test !pde_result.diagnostics.similarity_collapse_successful
+    @test pde_result.diagnostics.similarity_collapse_grid_points == 0
 end
 
 @testset "Mesh and domain helpers reject ambiguous NamedTuples" begin

@@ -46,6 +46,35 @@ _observed_order(coarse, fine, component::Symbol) =
     log(getproperty(coarse, component) / getproperty(fine, component)) /
     log(coarse.h / fine.h)
 
+function _manufactured_collapse_data(; perturb::Bool=false,
+                                     times=[0.0, 0.25, 0.6, 1.0],
+                                     exponent=2 / 3,
+                                     time_offset=0.0,
+                                     z=collect(range(0.5, 6.0, length=121)))
+    R = Vector{Vector{Float64}}()
+    u = Vector{Vector{Float64}}()
+    for t in times
+        effective_time = t - time_offset
+        if effective_time <= 0
+            push!(R, 0.2 .+ 0.1 .* z)
+            push!(u, zeros(length(z)))
+            continue
+        end
+        ell = effective_time^exponent
+        velocity_scale = exponent * effective_time^(exponent - 1)
+        xi = z ./ ell
+        S = @. 1.0 + 0.2 * xi
+        U = @. 0.35 - 0.04 * xi
+        if perturb && t == last(times)
+            S = @. S + 0.025 * sin(1.7 * xi)
+            U = @. U + 0.015 * cos(1.3 * xi)
+        end
+        push!(R, ell .* S)
+        push!(u, velocity_scale .* U)
+    end
+    (z=z, t=Float64.(times), R=R, u=u)
+end
+
 @testset "Time-dependent PDE" begin
 
     @testset "Stretched grid" begin
@@ -256,6 +285,12 @@ _observed_order(coarse, fine, component::Symbol) =
         @test diagnostics.pde_diagnostic_source_status == "IMPL-inferred"
         @test occursin("not Decent-King benchmark",
                        diagnostics.pde_diagnostic_basis)
+        @test haskey(diagnostics, :similarity_collapse)
+        @test diagnostics.similarity_collapse_status == :ok
+        @test diagnostics.similarity_collapse_successful
+        @test isfinite(diagnostics.similarity_collapse_score)
+        @test diagnostics.similarity_collapse_grid_points == 128
+        @test diagnostics.similarity_collapse_included_snapshots >= 2
     end
 
     @testset "PDE conservation diagnostics validation" begin
@@ -328,6 +363,106 @@ _observed_order(coarse, fine, component::Symbol) =
 
         @test !diagnostics_succeeded(
             PDESolution([1.0, 1.0, 2.0], times, R, u, 0.1, ok))
+    end
+
+    @testset "Similarity collapse diagnostics" begin
+        data = _manufactured_collapse_data()
+        diagnostics = similarity_collapse_diagnostics(
+            data.z, data.t, data.R, data.u; epsilon=0.1, n_grid=64)
+
+        @test diagnostics.successful
+        @test diagnostics.status == :ok
+        @test diagnostics.source_status == "IMPL-inferred"
+        @test diagnostics.exponent ≈ 2 / 3
+        @test diagnostics.time_offset == 0.0
+        @test diagnostics.velocity_scaling_convention ==
+              "U = u / (exponent * (t - time_offset)^(exponent - 1))"
+        @test diagnostics.xi_window.min < diagnostics.xi_window.max
+        @test diagnostics.xi_window.source == :intersection_of_trusted_windows
+        @test length(diagnostics.xi_grid) == 64
+        @test diagnostics.interpolation_grid.points == 64
+        @test diagnostics.component_weights.profile == 1.0
+        @test sum(diagnostics.snapshot_weights) ≈ 1.0
+        @test length(diagnostics.snapshot_weights) == 3
+        @test length(diagnostics.included_snapshots) == 3
+        @test length(diagnostics.excluded_snapshots) == 1
+        @test diagnostics.excluded_snapshots[1].reason ==
+              :nonpositive_effective_time
+        @test length(diagnostics.excluded_regions) == 3
+        @test diagnostics.reference_snapshot_index == 4
+        @test diagnostics.reference_time == 1.0
+        @test diagnostics.norms.profile.relative_rms < 1e-12
+        @test diagnostics.norms.slope.relative_rms < 1e-12
+        @test diagnostics.norms.curvature.rms < 1e-12
+        @test diagnostics.norms.velocity.relative_rms < 1e-12
+        @test diagnostics.aggregate_score < 1e-12
+        @test diagnostics.norms.wave_phase.status ==
+              :insufficient_wave_train
+
+        pde = PDESolution(data.z, data.t, data.R, data.u, 0.1,
+                          (context="manufactured",
+                           retcode=:Success,
+                           successful=true,
+                           endpoint=1.0,
+                           requested_endpoint=1.0,
+                           saved_points=length(data.t)))
+        pde_diagnostics = similarity_collapse_diagnostics(pde; n_grid=64)
+        @test pde_diagnostics.aggregate_score < 1e-12
+        @test pde_diagnostics.norms.wave_phase.status ==
+              :insufficient_wave_train
+
+        offset_data = _manufactured_collapse_data(
+            times=[0.05, 0.35, 0.7, 1.1], time_offset=0.1)
+        offset_diagnostics = similarity_collapse_diagnostics(
+            offset_data.z, offset_data.t, offset_data.R, offset_data.u;
+            epsilon=0.1, time_offset=0.1, n_grid=32)
+        @test offset_diagnostics.successful
+        @test offset_diagnostics.time_offset == 0.1
+        @test offset_diagnostics.aggregate_score < 1e-12
+        @test length(offset_diagnostics.excluded_snapshots) == 1
+        @test offset_diagnostics.excluded_snapshots[1].reason ==
+              :nonpositive_effective_time
+
+        perturbed_data = _manufactured_collapse_data(perturb=true)
+        perturbed = similarity_collapse_diagnostics(
+            perturbed_data.z, perturbed_data.t, perturbed_data.R,
+            perturbed_data.u; epsilon=0.1, n_grid=64)
+        @test perturbed.successful
+        @test perturbed.aggregate_score > diagnostics.aggregate_score
+        @test perturbed.norms.profile.relative_rms > 1e-4
+        @test perturbed.norms.velocity.relative_rms > 1e-4
+        @test any(score -> score.score > 1e-4,
+                  perturbed.per_snapshot_scores)
+    end
+
+    @testset "Similarity collapse invalid snapshot sets" begin
+        data = _manufactured_collapse_data()
+        insufficient = _manufactured_collapse_data(times=[-1.0, 0.0])
+        insufficient_diagnostics = similarity_collapse_diagnostics(
+            insufficient.z, insufficient.t, insufficient.R, insufficient.u;
+            epsilon=0.1, n_grid=32)
+        @test !insufficient_diagnostics.successful
+        @test insufficient_diagnostics.status == :insufficient_snapshots
+        @test length(insufficient_diagnostics.excluded_snapshots) == 2
+
+        nonoverlap = _manufactured_collapse_data(times=[0.001, 1e6],
+                                                 z=[1.0, 2.0, 3.0, 4.0, 5.0])
+        nonoverlap_diagnostics = similarity_collapse_diagnostics(
+            nonoverlap.z, nonoverlap.t, nonoverlap.R, nonoverlap.u;
+            epsilon=0.1, n_grid=32)
+        @test !nonoverlap_diagnostics.successful
+        @test nonoverlap_diagnostics.status == :empty_xi_overlap
+        @test nonoverlap_diagnostics.xi_window.min >=
+              nonoverlap_diagnostics.xi_window.max
+
+        @test_throws ArgumentError similarity_collapse_diagnostics(
+            [1.0, 1.0, 2.0], data.t, data.R, data.u)
+        @test_throws ArgumentError similarity_collapse_diagnostics(
+            data.z, data.t, data.R, data.u; n_grid=4)
+        @test_throws ArgumentError similarity_collapse_diagnostics(
+            data.z, data.t, data.R, data.u; exponent=0.0)
+        @test_throws ArgumentError similarity_collapse_diagnostics(
+            data.z, data.t, data.R, data.u; xi_window=(2.0, 1.0))
     end
 
     @testset "Initial condition preserved at t≈0" begin

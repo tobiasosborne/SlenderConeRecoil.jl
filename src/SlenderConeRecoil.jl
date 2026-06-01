@@ -18,5 +18,6 @@ include("api.jl")
 include("collocation.jl")
 include("continuation.jl")
 include("waves.jl")
+include("collapse.jl")
 
 end # module

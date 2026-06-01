@@ -325,7 +325,35 @@ function _pde_diagnostic_checks(sol::PDESolution)
      max_abs_left_boundary_area_flux=
          get(diagnostics, :max_abs_left_boundary_area_flux, NaN),
      max_abs_right_boundary_area_flux=
-         get(diagnostics, :max_abs_right_boundary_area_flux, NaN))
+         get(diagnostics, :max_abs_right_boundary_area_flux, NaN),
+     similarity_collapse_status=
+         get(diagnostics, :similarity_collapse_status, :not_computed),
+     similarity_collapse_successful=
+         get(diagnostics, :similarity_collapse_successful, false),
+     similarity_collapse_score=
+         get(diagnostics, :similarity_collapse_score, NaN),
+     similarity_collapse_xi_min=
+         get(diagnostics, :similarity_collapse_xi_min, NaN),
+     similarity_collapse_xi_max=
+         get(diagnostics, :similarity_collapse_xi_max, NaN),
+     similarity_collapse_grid_points=
+         get(diagnostics, :similarity_collapse_grid_points, 0),
+     similarity_collapse_included_snapshots=
+         get(diagnostics, :similarity_collapse_included_snapshots, 0),
+     similarity_collapse_excluded_snapshots=
+         get(diagnostics, :similarity_collapse_excluded_snapshots, 0),
+     similarity_collapse_profile_relative_rms=
+         get(diagnostics, :similarity_collapse_profile_relative_rms, NaN),
+     similarity_collapse_slope_relative_rms=
+         get(diagnostics, :similarity_collapse_slope_relative_rms, NaN),
+     similarity_collapse_curvature_relative_rms=
+         get(diagnostics, :similarity_collapse_curvature_relative_rms, NaN),
+     similarity_collapse_velocity_relative_rms=
+         get(diagnostics, :similarity_collapse_velocity_relative_rms, NaN),
+     similarity_collapse_wave_phase_status=
+         get(diagnostics, :similarity_collapse_wave_phase_status, :not_computed),
+     similarity_collapse_wave_phase_relative_rms=
+         get(diagnostics, :similarity_collapse_wave_phase_relative_rms, NaN))
 end
 
 function diagnostic_summary(sol::InnerSolution; problem_kind::Symbol=:cone_similarity)

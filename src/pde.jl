@@ -342,8 +342,68 @@ function pde_conservation_diagnostics(sol::PDESolution)
                                      get(diagnostics, :saved_points, nothing))
 end
 
+function _pde_similarity_collapse_fields(z, t_snapshots, R, u; epsilon=nothing)
+    if !isdefined(@__MODULE__, :similarity_collapse_diagnostics)
+        diagnostic = (status=:not_loaded,
+                      successful=false,
+                      message="similarity_collapse_diagnostics is not loaded",
+                      aggregate_score=NaN,
+                      xi_window=(min=NaN, max=NaN, source=:not_available),
+                      interpolation_grid=(points=0,),
+                      included_snapshots=NamedTuple[],
+                      excluded_snapshots=NamedTuple[],
+                      norms=(profile=(relative_rms=NaN,),
+                             slope=(relative_rms=NaN,),
+                             curvature=(relative_rms=NaN,),
+                             velocity=(relative_rms=NaN,),
+                             wave_phase=(status=:not_computed,
+                                         aggregate_relative_rms=NaN)))
+    else
+        collapse_fn = getfield(@__MODULE__, :similarity_collapse_diagnostics)
+        diagnostic = try
+            collapse_fn(z, t_snapshots, R, u; epsilon=epsilon)
+        catch err
+            (status=:failed,
+             successful=false,
+             message=sprint(showerror, err),
+             aggregate_score=NaN,
+             xi_window=(min=NaN, max=NaN, source=:not_available),
+             interpolation_grid=(points=0,),
+             included_snapshots=NamedTuple[],
+             excluded_snapshots=NamedTuple[],
+             norms=(profile=(relative_rms=NaN,),
+                    slope=(relative_rms=NaN,),
+                    curvature=(relative_rms=NaN,),
+                    velocity=(relative_rms=NaN,),
+                    wave_phase=(status=:not_computed,
+                                aggregate_relative_rms=NaN)))
+        end
+    end
+    (similarity_collapse=diagnostic,
+     similarity_collapse_status=diagnostic.status,
+     similarity_collapse_successful=diagnostic.successful,
+     similarity_collapse_score=diagnostic.aggregate_score,
+     similarity_collapse_xi_min=diagnostic.xi_window.min,
+     similarity_collapse_xi_max=diagnostic.xi_window.max,
+     similarity_collapse_grid_points=diagnostic.interpolation_grid.points,
+     similarity_collapse_included_snapshots=length(diagnostic.included_snapshots),
+     similarity_collapse_excluded_snapshots=length(diagnostic.excluded_snapshots),
+     similarity_collapse_profile_relative_rms=
+         diagnostic.norms.profile.relative_rms,
+     similarity_collapse_slope_relative_rms=
+         diagnostic.norms.slope.relative_rms,
+     similarity_collapse_curvature_relative_rms=
+         diagnostic.norms.curvature.relative_rms,
+     similarity_collapse_velocity_relative_rms=
+         diagnostic.norms.velocity.relative_rms,
+     similarity_collapse_wave_phase_status=
+         diagnostic.norms.wave_phase.status,
+     similarity_collapse_wave_phase_relative_rms=
+         diagnostic.norms.wave_phase.aggregate_relative_rms)
+end
+
 function _pde_solution_diagnostics(base::NamedTuple, z, t_snapshots, R, u;
-                                   solver_stats=nothing)
+                                   solver_stats=nothing, epsilon=nothing)
     pde_fields = pde_conservation_diagnostics(
         z, t_snapshots, R, u;
         retcode=get(base, :retcode, nothing),
@@ -351,6 +411,8 @@ function _pde_solution_diagnostics(base::NamedTuple, z, t_snapshots, R, u;
         requested_endpoint=get(base, :requested_endpoint, nothing),
         saved_points=get(base, :saved_points, nothing),
         solver_stats=solver_stats)
+    collapse_fields = _pde_similarity_collapse_fields(
+        z, t_snapshots, R, u; epsilon=epsilon)
     base_success = haskey(base, :successful) && Bool(base.successful)
     successful = base_success && pde_fields.pde_data_valid &&
                  pde_fields.finite_state && pde_fields.positive_radius &&
@@ -358,7 +420,7 @@ function _pde_solution_diagnostics(base::NamedTuple, z, t_snapshots, R, u;
                  pde_fields.time_strictly_increasing &&
                  pde_fields.retcode_successful &&
                  pde_fields.endpoint_reached
-    merge(base, pde_fields, (successful=successful,))
+    merge(base, pde_fields, collapse_fields, (successful=successful,))
 end
 
 # ── Grid construction ──────────────────────────────────────────────────
@@ -524,7 +586,7 @@ function solve_pde(; ε::Float64=0.1, N::Int=200, z_min::Float64=0.01,
         diagnostics = _solution_diagnostics("PDE method-of-lines solve", 0.0, 0.0;
                                             retcode=:Success, saved_points=1)
         diagnostics = _pde_solution_diagnostics(
-            diagnostics, z, [0.0], [copy(R0)], [copy(u0)])
+            diagnostics, z, [0.0], [copy(R0)], [copy(u0)]; epsilon=ε)
         return PDESolution(z, [0.0], [copy(R0)], [copy(u0)], ε, diagnostics)
     end
 
@@ -549,7 +611,7 @@ function solve_pde(; ε::Float64=0.1, N::Int=200, z_min::Float64=0.01,
     u_snapshots = [sol.u[i][N+1:2N] for i in eachindex(sol.u)]
     diagnostics = _pde_solution_diagnostics(
         diagnostics, z, t_out, R_snapshots, u_snapshots;
-        solver_stats=sol.stats)
+        solver_stats=sol.stats, epsilon=ε)
 
     PDESolution(z, t_out, R_snapshots, u_snapshots, ε, diagnostics)
 end

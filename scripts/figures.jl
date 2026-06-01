@@ -176,6 +176,52 @@ function _write_wave_diagnostics(io, table::AbstractString, diagnostics)
               diagnostics.qualitative.modulation_scale_ratio)
 end
 
+function _write_collapse_diagnostics(io, table::AbstractString, diagnostics)
+    diagnostics === nothing && return
+    component_weights = get(diagnostics, :component_weights,
+                            (profile=NaN, slope=NaN, curvature=NaN,
+                             velocity=NaN, wave_phase=NaN))
+    println(io)
+    println(io, "[$table]")
+    _write_kv(io, "status", diagnostics.status)
+    _write_kv(io, "successful", diagnostics.successful)
+    _write_kv(io, "source_status",
+              get(diagnostics, :source_status, "unknown"))
+    _write_kv(io, "aggregate_score", diagnostics.aggregate_score)
+    _write_kv(io, "xi_window_min", diagnostics.xi_window.min)
+    _write_kv(io, "xi_window_max", diagnostics.xi_window.max)
+    _write_kv(io, "xi_window_source", diagnostics.xi_window.source)
+    _write_kv(io, "interpolation_grid_points",
+              diagnostics.interpolation_grid.points)
+    _write_kv(io, "component_weight_profile",
+              component_weights.profile)
+    _write_kv(io, "component_weight_slope",
+              component_weights.slope)
+    _write_kv(io, "component_weight_curvature",
+              component_weights.curvature)
+    _write_kv(io, "component_weight_velocity",
+              component_weights.velocity)
+    _write_kv(io, "component_weight_wave_phase",
+              component_weights.wave_phase)
+    _write_kv(io, "included_snapshots", length(diagnostics.included_snapshots))
+    _write_kv(io, "excluded_snapshots", length(diagnostics.excluded_snapshots))
+    _write_kv(io, "reference_snapshot_index",
+              diagnostics.reference_snapshot_index)
+    _write_kv(io, "reference_time", diagnostics.reference_time)
+    _write_kv(io, "profile_relative_rms",
+              diagnostics.norms.profile.relative_rms)
+    _write_kv(io, "slope_relative_rms",
+              diagnostics.norms.slope.relative_rms)
+    _write_kv(io, "curvature_relative_rms",
+              diagnostics.norms.curvature.relative_rms)
+    _write_kv(io, "velocity_relative_rms",
+              diagnostics.norms.velocity.relative_rms)
+    _write_kv(io, "wave_phase_status",
+              diagnostics.norms.wave_phase.status)
+    _write_kv(io, "wave_phase_relative_rms",
+              diagnostics.norms.wave_phase.aggregate_relative_rms)
+end
+
 function _require_successful_figure_diagnostics(label::AbstractString, diagnostics)
     diagnostics === nothing && return
     diagnostics_succeeded(diagnostics) ||
@@ -246,7 +292,17 @@ function write_figure_metadata(; sol=nothing, outer_linearised=nothing,
 
         _write_diagnostics(io, "outer_linearised_diagnostics", outer_linearised)
         _write_diagnostics(io, "outer_full_diagnostics", outer_full)
-        _write_diagnostics(io, "pde_solution_diagnostics", pde)
+        if pde !== nothing
+            pde_diagnostics = hasproperty(pde, :diagnostics) ?
+                              pde.diagnostics : pde
+            _write_diagnostics(io, "pde_solution_diagnostics",
+                               pde_diagnostics)
+        end
+        if pde !== nothing && hasproperty(pde, :diagnostics) &&
+           haskey(pde.diagnostics, :similarity_collapse)
+            _write_collapse_diagnostics(io, "pde_similarity_collapse",
+                                        pde.diagnostics.similarity_collapse)
+        end
     end
     println("Metadata saved: ", relpath(path, PROJECT_ROOT))
     path
