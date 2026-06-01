@@ -1,0 +1,121 @@
+[metadata]
+artifact_version = 1
+created = "2026-06-01"
+ledger_path = "docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md"
+scope = "Source-backed cone reference data for tests; local implementation regression values are intentionally excluded."
+
+[[records]]
+id = "DK2001-figure1-epsilon"
+source = "DecentKing2001-IUTAM"
+status = "C2001"
+fact_type = "numeric"
+quantity = "figure_1_epsilon"
+value = 0.01
+tolerance = 0.0
+doi = "10.1007/978-94-010-0796-2_10"
+page_equation_figure_reference = "Figure 1, printed p. 84 / PDF p. 96"
+extraction_method = "Recorded from the source ledger after local 2001 PDF text/visual extraction."
+units_scaling = "Dimensionless cone aspect ratio epsilon in the 2001 one-dimensional similarity model."
+tolerance_rationale = "Printed parameter value; exact decimal storage is expected."
+source_status_note = "2001 precursor value only; not a Decent-King 2008 benchmark."
+
+[[records]]
+id = "DK2001-direct-shooting-y0-limit"
+source = "DecentKing2001-IUTAM"
+status = "C2001"
+caveats = ["OCR-needs-check"]
+fact_type = "numeric"
+quantity = "direct_shooting_y0_limit"
+value = 1.50
+tolerance = 0.005
+doi = "10.1007/978-94-010-0796-2_10"
+page_equation_figure_reference = "Section 2, direct shooting constants, printed p. 84 / PDF p. 96"
+extraction_method = "Recorded from the source ledger after local 2001 PDF extraction; exact symbolic context remains OCR-limited."
+units_scaling = "Dimensionless 2001 precursor y-coordinate offset constant y0 in A(y), R(y) variables."
+tolerance_rationale = "Printed to two decimal places; half-unit in the last printed decimal is the comparison tolerance."
+source_status_note = "Do not compare directly to current S/U/xi inner solver constants."
+
+[[records]]
+id = "DK2001-direct-shooting-p0-limit"
+source = "DecentKing2001-IUTAM"
+status = "C2001"
+caveats = ["OCR-needs-check"]
+fact_type = "numeric"
+quantity = "direct_shooting_p0_limit"
+value = 2.65
+tolerance = 0.005
+doi = "10.1007/978-94-010-0796-2_10"
+page_equation_figure_reference = "Section 2, direct shooting constants, printed p. 84 / PDF p. 96"
+extraction_method = "Recorded from the source ledger after local 2001 PDF extraction; exact symbolic context remains OCR-limited."
+units_scaling = "Dimensionless 2001 precursor near-tip constant p0 in A(y), R(y) variables."
+tolerance_rationale = "Printed to two decimal places; half-unit in the last printed decimal is the comparison tolerance."
+source_status_note = "Do not compare directly to current S/U/xi inner solver constants."
+
+[[records]]
+id = "DK2001-figure1-oscillation-qualitative"
+source = "DecentKing2001-IUTAM"
+status = "C2001"
+fact_type = "qualitative"
+quantity = "figure_1_oscillation_description"
+text_value = "Figure 1 shows high-frequency oscillations modulated on a longer scale."
+doi = "10.1007/978-94-010-0796-2_10"
+page_equation_figure_reference = "Figure 1, printed p. 84 / PDF p. 96"
+extraction_method = "Recorded from the source ledger's qualitative figure description."
+units_scaling = "Qualitative statement about 2001 precursor R and A profiles; no numeric units."
+tolerance_rationale = "No numeric tolerance; this record is used only as source-backed qualitative metadata."
+source_status_note = "Qualitatively consistent with the cone-wave narrative, but not a quantitative current-solver benchmark."
+
+[[records]]
+id = "DK2008-canonical-metadata"
+source = "DecentKing2008-IMAJAM"
+status = "C2008-meta"
+fact_type = "metadata"
+quantity = "canonical_article_identity"
+doi = "10.1093/imamat/hxm043"
+page_equation_figure_reference = "IMA Journal of Applied Mathematics 73(1), journal pp. 37-68; article-body page/equation/figure details unavailable."
+extraction_method = "Verified from DOI and institutional metadata/abstract records, not the canonical article body."
+units_scaling = "Not applicable; bibliographic metadata only."
+tolerance_rationale = "No numeric tolerance; metadata record."
+source_status_note = "Article-body numerical values remain blocked."
+
+[[records]]
+id = "DK2008-similarity-tip-constants-blocked"
+source = "DecentKing2008-IMAJAM"
+status = "BLOCKED-2008"
+fact_type = "blocked_quantitative"
+quantity = "similarity_tip_constants"
+no_numeric_benchmark = true
+doi = "10.1093/imamat/hxm043"
+page_equation_figure_reference = "BLOCKED: canonical article body unavailable; only journal pp. 37-68 are known from metadata."
+extraction_method = "Pending acquisition and extraction of the canonical article body."
+units_scaling = "Pending source extraction; do not infer from current implementation variables."
+tolerance_rationale = "No tolerance until the source value, printed precision, and extraction method are known."
+source_status_note = "Do not populate from local xi0, S0, or S''0 regression values."
+
+[[records]]
+id = "DK2008-inner-outer-matching-constants-blocked"
+source = "DecentKing2008-IMAJAM"
+status = "BLOCKED-2008"
+fact_type = "blocked_quantitative"
+quantity = "inner_outer_matching_constants"
+no_numeric_benchmark = true
+doi = "10.1093/imamat/hxm043"
+page_equation_figure_reference = "BLOCKED: canonical article body unavailable; only journal pp. 37-68 are known from metadata."
+extraction_method = "Pending acquisition and extraction of the canonical article body."
+units_scaling = "Pending source extraction; keep separate from current outer/composite regression data."
+tolerance_rationale = "No tolerance until the source value, printed precision, and extraction method are known."
+source_status_note = "Do not populate from local outer or composite overlap regression values."
+
+[[records]]
+id = "DK2008-figure-quantities-blocked"
+source = "DecentKing2008-IMAJAM"
+status = "BLOCKED-2008"
+fact_type = "blocked_quantitative"
+quantity = "figure_derived_quantities"
+no_numeric_benchmark = true
+doi = "10.1093/imamat/hxm043"
+page_equation_figure_reference = "BLOCKED: canonical article body unavailable; only journal pp. 37-68 are known from metadata."
+extraction_method = "Pending acquisition, figure identification, and digitization or tabulation from the canonical article body."
+units_scaling = "Pending source extraction; no figure-axis scaling has been confirmed."
+tolerance_rationale = "No tolerance until the plotted quantity, axis scaling, digitization method, and source resolution are known."
+source_status_note = "Do not populate from generated package figures."

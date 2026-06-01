@@ -8,6 +8,7 @@ const FAST_TEST_FILES = (
     "test_bead3.jl",
     "test_bead4.jl",
     "test_outer_hierarchy.jl",
+    "test_reference_data.jl",
 )
 const SLOW_TEST_FILES = (
     "test_bead5.jl",

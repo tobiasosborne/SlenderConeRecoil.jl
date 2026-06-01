@@ -119,6 +119,11 @@ article. Do not promote 2001-only constants or current solver outputs to
 These are the quantities that must be captured before inner, outer, composite,
 and PDE verification can claim source fidelity.
 
+Machine-readable reference records currently live in
+`test/reference/decent_king_cone_reference.toml`. That file intentionally keeps
+2001 precursor values, 2008 metadata, blocked 2008 quantitative placeholders,
+and local regression values separate.
+
 | Verification area | Required quantities | Current status |
 | --- | --- | --- |
 | Slender/PDE model | Dimensional variables, nondimensional scales, exact slender equations, curvature convention, axial-curvature ordering, pressure/Bernoulli sign, initial cone, far-field condition, tip condition, valid time range. | Initial/far-field/scaling partly `C2001`; primitive equations and axial term `IMPL-inferred`; exact 2008 equation IDs `BLOCKED-2008`. |
