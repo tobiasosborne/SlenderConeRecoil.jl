@@ -12,6 +12,7 @@ include("outer_hierarchy.jl")
 include("pde.jl")
 include("provenance.jl")
 include("diagnostics.jl")
+include("bvp_residuals.jl")
 include("api.jl")
 
 end # module

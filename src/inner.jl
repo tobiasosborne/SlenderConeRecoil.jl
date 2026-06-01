@@ -141,9 +141,9 @@ function solve_inner_bvp(; ξ₀::Float64=2.79, S₀::Float64=0.28, Sξξ₀::Fl
                            ode_maxiters::Int=2_000_000,
                            throw_on_failure::Bool=false)
     function residual(x)
-        ξv, Sv, _, Sppv, Uv =
-            _shoot(x[1], x[2], x[3], ξ_max; maxiters=ode_maxiters)
-        [Sv[end] / ξv[end] - ε, Uv[end], Sppv[end]]
+        inner_bvp_residual_vector(x; ξ_max=ξ_max, ε=ε,
+                                  maxiters=ode_maxiters,
+                                  context="inner Newton shooting residual")
     end
 
     x = [ξ₀, S₀, Sξξ₀]
