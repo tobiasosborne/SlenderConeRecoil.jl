@@ -1,7 +1,19 @@
 [metadata]
 artifact_version = 1
+schema_version = 1
+schema_path = "docs/reference_data_schema.md"
+dataset_id = "decent-king-cone-source-values"
+dataset_kind = "source_values"
+storage_policy = "tracked-test-reference-data"
+canonical_reusable_data_location = "data/reference/"
+artifact_policy = "Licensed source PDFs remain ignored under docs/papers; records carry local checksum metadata only."
 created = "2026-06-01"
+recorded_date = "2026-06-01"
 ledger_path = "docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md"
+package_name = "SlenderConeRecoil"
+package_version = "0.1.0"
+package_commit = "not-recorded"
+package_commit_status = "not_recorded"
 scope = "Source-backed cone reference data for tests; local implementation regression values are intentionally excluded."
 
 [[records]]
@@ -13,11 +25,21 @@ quantity = "figure_1_epsilon"
 value = 0.01
 tolerance = 0.0
 doi = "10.1007/978-94-010-0796-2_10"
+local_source_artifact_path = "docs/papers/DecentKing2001_IUTAM.pdf"
+local_source_checksum_algorithm = "sha256"
+local_source_checksum = "sha256:efd95dddbb6571ce324a3115a2812df37c3265d296d4818f96d8c804fa7ab524"
+local_source_checksum_status = "recorded"
+source_license_access_status = "licensed-local-ignored"
 page_equation_figure_reference = "Figure 1, printed p. 84 / PDF p. 96"
 extraction_method = "Recorded from the source ledger after local 2001 PDF text/visual extraction."
+parameters = { epsilon = 0.01, source_model = "2001 one-dimensional similarity model", source_figure = "Figure 1" }
+solver_settings = { status = "not_applicable", reason = "source extraction only" }
 units_scaling = "Dimensionless cone aspect ratio epsilon in the 2001 one-dimensional similarity model."
+tolerances = { absolute = 0.0, relative = 0.0, rationale = "Printed parameter value; exact decimal storage is expected." }
 tolerance_rationale = "Printed parameter value; exact decimal storage is expected."
 source_status_note = "2001 precursor value only; not a Decent-King 2008 benchmark."
+recorded_date = "2026-06-01"
+data_hash = "sha256:2a4f5197f4cc0754f0d8d270d928b31af5439acb0e51eac339ac1caa25de3f7b"
 
 [[records]]
 id = "DK2001-direct-shooting-y0-limit"
@@ -29,11 +51,21 @@ quantity = "direct_shooting_y0_limit"
 value = 1.50
 tolerance = 0.005
 doi = "10.1007/978-94-010-0796-2_10"
+local_source_artifact_path = "docs/papers/DecentKing2001_IUTAM.pdf"
+local_source_checksum_algorithm = "sha256"
+local_source_checksum = "sha256:efd95dddbb6571ce324a3115a2812df37c3265d296d4818f96d8c804fa7ab524"
+local_source_checksum_status = "recorded"
+source_license_access_status = "licensed-local-ignored"
 page_equation_figure_reference = "Section 2, direct shooting constants, printed p. 84 / PDF p. 96"
 extraction_method = "Recorded from the source ledger after local 2001 PDF extraction; exact symbolic context remains OCR-limited."
+parameters = { limit = "lambda_to_infinity", source_model = "2001 direct shooting precursor", variable = "y0" }
+solver_settings = { status = "not_applicable", reason = "source extraction only" }
 units_scaling = "Dimensionless 2001 precursor y-coordinate offset constant y0 in A(y), R(y) variables."
+tolerances = { absolute = 0.005, relative = 0.0, rationale = "Printed to two decimal places; half-unit in the last printed decimal is the comparison tolerance." }
 tolerance_rationale = "Printed to two decimal places; half-unit in the last printed decimal is the comparison tolerance."
 source_status_note = "Do not compare directly to current S/U/xi inner solver constants."
+recorded_date = "2026-06-01"
+data_hash = "sha256:7cd6c2f90ae4b978346aff8da9b07c38281c2f62d077a67df6f3a928748a2b44"
 
 [[records]]
 id = "DK2001-direct-shooting-p0-limit"
@@ -45,11 +77,21 @@ quantity = "direct_shooting_p0_limit"
 value = 2.65
 tolerance = 0.005
 doi = "10.1007/978-94-010-0796-2_10"
+local_source_artifact_path = "docs/papers/DecentKing2001_IUTAM.pdf"
+local_source_checksum_algorithm = "sha256"
+local_source_checksum = "sha256:efd95dddbb6571ce324a3115a2812df37c3265d296d4818f96d8c804fa7ab524"
+local_source_checksum_status = "recorded"
+source_license_access_status = "licensed-local-ignored"
 page_equation_figure_reference = "Section 2, direct shooting constants, printed p. 84 / PDF p. 96"
 extraction_method = "Recorded from the source ledger after local 2001 PDF extraction; exact symbolic context remains OCR-limited."
+parameters = { limit = "lambda_to_infinity", source_model = "2001 direct shooting precursor", variable = "p0" }
+solver_settings = { status = "not_applicable", reason = "source extraction only" }
 units_scaling = "Dimensionless 2001 precursor near-tip constant p0 in A(y), R(y) variables."
+tolerances = { absolute = 0.005, relative = 0.0, rationale = "Printed to two decimal places; half-unit in the last printed decimal is the comparison tolerance." }
 tolerance_rationale = "Printed to two decimal places; half-unit in the last printed decimal is the comparison tolerance."
 source_status_note = "Do not compare directly to current S/U/xi inner solver constants."
+recorded_date = "2026-06-01"
+data_hash = "sha256:56ef5bd3567facc86a76bcb7af9080cdd8b113b0bac55d3eba512f8a19ff58d7"
 
 [[records]]
 id = "DK2001-figure1-oscillation-qualitative"
@@ -59,11 +101,21 @@ fact_type = "qualitative"
 quantity = "figure_1_oscillation_description"
 text_value = "Figure 1 shows high-frequency oscillations modulated on a longer scale."
 doi = "10.1007/978-94-010-0796-2_10"
+local_source_artifact_path = "docs/papers/DecentKing2001_IUTAM.pdf"
+local_source_checksum_algorithm = "sha256"
+local_source_checksum = "sha256:efd95dddbb6571ce324a3115a2812df37c3265d296d4818f96d8c804fa7ab524"
+local_source_checksum_status = "recorded"
+source_license_access_status = "licensed-local-ignored"
 page_equation_figure_reference = "Figure 1, printed p. 84 / PDF p. 96"
 extraction_method = "Recorded from the source ledger's qualitative figure description."
+parameters = { epsilon = 0.01, source_model = "2001 one-dimensional similarity model", source_figure = "Figure 1" }
+solver_settings = { status = "not_applicable", reason = "source extraction only" }
 units_scaling = "Qualitative statement about 2001 precursor R and A profiles; no numeric units."
+tolerances = { status = "not_applicable", rationale = "No numeric tolerance; this record is used only as source-backed qualitative metadata." }
 tolerance_rationale = "No numeric tolerance; this record is used only as source-backed qualitative metadata."
 source_status_note = "Qualitatively consistent with the cone-wave narrative, but not a quantitative current-solver benchmark."
+recorded_date = "2026-06-01"
+data_hash = "sha256:1c646adbd9dca8ab3269280b99bc39176e848c1df6ce40a1582c8c55ea9f0b27"
 
 [[records]]
 id = "DK2008-canonical-metadata"
@@ -72,11 +124,21 @@ status = "C2008-meta"
 fact_type = "metadata"
 quantity = "canonical_article_identity"
 doi = "10.1093/imamat/hxm043"
+local_source_artifact_path = "docs/papers/DecentKing2008_IMAJAM_73_1_37-68_hxm043.pdf"
+local_source_checksum_algorithm = "sha256"
+local_source_checksum = "pending-acquisition"
+local_source_checksum_status = "missing"
+source_license_access_status = "institutional-access-blocked"
 page_equation_figure_reference = "IMA Journal of Applied Mathematics 73(1), journal pp. 37-68; article-body page/equation/figure details unavailable."
 extraction_method = "Verified from DOI and institutional metadata/abstract records, not the canonical article body."
+parameters = { status = "not_applicable", reason = "bibliographic metadata only" }
+solver_settings = { status = "not_applicable", reason = "source metadata only" }
 units_scaling = "Not applicable; bibliographic metadata only."
+tolerances = { status = "not_applicable", rationale = "No numeric tolerance; metadata record." }
 tolerance_rationale = "No numeric tolerance; metadata record."
 source_status_note = "Article-body numerical values remain blocked."
+recorded_date = "2026-06-01"
+data_hash = "sha256:b4821b6a7852316945d2f099d9cfa15a56f6c8892c05fbebd5e6483dfe73ca72"
 
 [[records]]
 id = "DK2008-similarity-tip-constants-blocked"
@@ -86,11 +148,21 @@ fact_type = "blocked_quantitative"
 quantity = "similarity_tip_constants"
 no_numeric_benchmark = true
 doi = "10.1093/imamat/hxm043"
+local_source_artifact_path = "docs/papers/DecentKing2008_IMAJAM_73_1_37-68_hxm043.pdf"
+local_source_checksum_algorithm = "sha256"
+local_source_checksum = "pending-acquisition"
+local_source_checksum_status = "missing"
+source_license_access_status = "institutional-access-blocked"
 page_equation_figure_reference = "BLOCKED: canonical article body unavailable; only journal pp. 37-68 are known from metadata."
 extraction_method = "Pending acquisition and extraction of the canonical article body."
+parameters = { status = "blocked", reason = "canonical article body unavailable" }
+solver_settings = { status = "not_applicable", reason = "no benchmark computed" }
 units_scaling = "Pending source extraction; do not infer from current implementation variables."
+tolerances = { status = "unavailable", rationale = "No tolerance until the source value, printed precision, and extraction method are known." }
 tolerance_rationale = "No tolerance until the source value, printed precision, and extraction method are known."
 source_status_note = "Do not populate from local xi0, S0, or S''0 regression values."
+recorded_date = "2026-06-01"
+data_hash = "sha256:0ac6c416e2139d229c6edc2dd70da01d19a63b9ea2c57a8a33c485148d241344"
 
 [[records]]
 id = "DK2008-inner-outer-matching-constants-blocked"
@@ -100,11 +172,21 @@ fact_type = "blocked_quantitative"
 quantity = "inner_outer_matching_constants"
 no_numeric_benchmark = true
 doi = "10.1093/imamat/hxm043"
+local_source_artifact_path = "docs/papers/DecentKing2008_IMAJAM_73_1_37-68_hxm043.pdf"
+local_source_checksum_algorithm = "sha256"
+local_source_checksum = "pending-acquisition"
+local_source_checksum_status = "missing"
+source_license_access_status = "institutional-access-blocked"
 page_equation_figure_reference = "BLOCKED: canonical article body unavailable; only journal pp. 37-68 are known from metadata."
 extraction_method = "Pending acquisition and extraction of the canonical article body."
+parameters = { status = "blocked", reason = "canonical article body unavailable" }
+solver_settings = { status = "not_applicable", reason = "no benchmark computed" }
 units_scaling = "Pending source extraction; keep separate from current outer/composite regression data."
+tolerances = { status = "unavailable", rationale = "No tolerance until the source value, printed precision, and extraction method are known." }
 tolerance_rationale = "No tolerance until the source value, printed precision, and extraction method are known."
 source_status_note = "Do not populate from local outer or composite overlap regression values."
+recorded_date = "2026-06-01"
+data_hash = "sha256:a5d47adaf531820d59a16ff0af785d6c59ad56337be29a85408896f65b90d325"
 
 [[records]]
 id = "DK2008-figure-quantities-blocked"
@@ -114,8 +196,18 @@ fact_type = "blocked_quantitative"
 quantity = "figure_derived_quantities"
 no_numeric_benchmark = true
 doi = "10.1093/imamat/hxm043"
+local_source_artifact_path = "docs/papers/DecentKing2008_IMAJAM_73_1_37-68_hxm043.pdf"
+local_source_checksum_algorithm = "sha256"
+local_source_checksum = "pending-acquisition"
+local_source_checksum_status = "missing"
+source_license_access_status = "institutional-access-blocked"
 page_equation_figure_reference = "BLOCKED: canonical article body unavailable; only journal pp. 37-68 are known from metadata."
 extraction_method = "Pending acquisition, figure identification, and digitization or tabulation from the canonical article body."
+parameters = { status = "blocked", reason = "canonical article body unavailable" }
+solver_settings = { status = "not_applicable", reason = "no benchmark computed" }
 units_scaling = "Pending source extraction; no figure-axis scaling has been confirmed."
+tolerances = { status = "unavailable", rationale = "No tolerance until the plotted quantity, axis scaling, digitization method, and source resolution are known." }
 tolerance_rationale = "No tolerance until the plotted quantity, axis scaling, digitization method, and source resolution are known."
 source_status_note = "Do not populate from generated package figures."
+recorded_date = "2026-06-01"
+data_hash = "sha256:64363ee4d977bd15291fa814910c679061bca55d3a67e11bf322ba6b4525762b"

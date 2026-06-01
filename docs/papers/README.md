@@ -4,6 +4,10 @@ Licensed PDFs and downloaded paper images in this directory are intentionally
 ignored by git. Keep bibliographic metadata, access notes, and checksum records
 in this manifest; do not commit publisher PDFs.
 
+Reference datasets must cite local paper checksums through metadata only. The
+schema and artifact policy live in `docs/reference_data_schema.md`; normal
+package loading and routine tests must not require any ignored PDF to exist.
+
 Use checksums to identify local copies, not to imply redistribution rights:
 
 ```bash
