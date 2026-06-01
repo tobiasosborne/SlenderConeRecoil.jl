@@ -1,4 +1,4 @@
-# Higher-order outer expansion: CAS-derived hierarchy + full nonlinear solver.
+# Local outer hierarchy experiment: CAS-derived algebra + nonlinear solver.
 #
 # Ledger status, per
 # docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md:
@@ -6,6 +6,11 @@
 # half-integer powers in different variables. The hierarchy below is a local
 # reconstructed CAS experiment for the package's primitive S,U equations, not a
 # source-confirmed Decent-King 2008 outer hierarchy.
+#
+# Supported CAS grammar is intentionally narrower than the source-specific
+# matched-asymptotic structure: finite integer-power/Laurent ε series with
+# ε-free symbolic coefficients. Half-integer and multiple-scale oscillatory
+# source hierarchies are not implemented by derive_outer_equations.
 #
 # The CAS substitutes the ansatz S = εξ + ε³σ₁ + ε⁵σ₂, U = ε²ω₁ + ε⁴ω₂
 # into the similarity ODEs, expands in ε, and collects at each order.
@@ -45,11 +50,20 @@ end
 
 Substitute the outer ansatz into the similarity ODEs, expand in ε,
 and collect at each order. Returns Dict{Int, (mass, momentum)} of
-symbolic equations for the local reconstructed S,U system. This checks
-internal algebra only; the ε-power structure and coefficient equations are not
-source-confirmed Decent-King formulae.
+symbolic equations for the local reconstructed S,U system.
+
+The supported expansion family is
+`S = εξ + ε³σ₁ + ε⁵σ₂`, `U = ε²ω₁ + ε⁴ω₂`, evaluated by the
+integer-power/Laurent grammar in `expand_in`. This checks internal algebra
+only; the ε-power structure and coefficient equations are local/internal and
+are not source-confirmed Decent-King formulae. The half-integer and
+multiple-scale oscillatory hierarchy described by the available 2001 precursor
+is not implemented here.
 """
 function derive_outer_equations(; order::Int=5)
+    order >= 0 ||
+        throw(ArgumentError("outer hierarchy derivation order must be nonnegative; got $order"))
+
     ε = Sym(:ε); ξ = Sym(:ξ)
 
     # Perturbation unknowns (scaled: s₁ ~ O(1), not O(ε³))
@@ -116,7 +130,7 @@ HierarchySolution(ξ, S, Sξ, Sξξ, U, ε) =
 Solve the FULL nonlinear similarity ODE outward from ξ_match, seeded
 by the inner solution's state. This local diagnostic solve captures nonlinear
 interactions in the reconstructed S,U system, but it is not a source-backed
-all-orders outer expansion.
+higher-order outer hierarchy.
 
 The result extends the inner solution into the far-field without the
 drift that accumulates when shooting from the tip.

@@ -452,12 +452,12 @@ function figure6(inner_sol)
     ε = FIGURE_EPSILON; ξ₀ = inner_sol.ξ₀; S₀ = inner_sol.S₀
     ξ_match = FIGURE6_XI_MATCH
 
-    # CAS-derived equations (verify hierarchy structure)
-    println("  CAS: deriving outer hierarchy...")
+    # Local CAS algebra check: integer/Laurent ε grammar, not source hierarchy.
+    println("  CAS: deriving local outer hierarchy...")
     eqs = derive_outer_equations(order=5)
     println("  Orders with nonzero terms: ", sort(collect(keys(eqs))))
 
-    # Solve both: linearised (first-order) and full nonlinear (all orders)
+    # Solve both: linearised and current reconstructed nonlinear outer systems.
     println("  Solving linearised outer...")
     outer_lin = solve_outer_linearised(inner_sol, ξ_match=ξ_match,
                                        ξ_max=FIGURE6_XI_MAX,
@@ -521,9 +521,9 @@ function figure6(inner_sol)
     xlims!(p, ξ₀ - S₀ - 0.3, 50); ylims!(p, 0, 5.5)
     save_figure(p, "fig6_matched_asymptotic")
 
-    # ── Excess plot: linearised vs full nonlinear ──
+    # ── Excess plot: linearised vs reconstructed nonlinear ──
     p2 = plot(xlabel="ξ", ylabel="S(ξ) − εξ",
-              title="Linearised O(ε³) vs full nonlinear outer (ε=$ε)",
+              title="Linearised O(ε³) vs reconstructed nonlinear outer (ε=$ε)",
               size=(900, 450), legend=:topright)
     hline!(p2, [0], label="", color=:gray, linestyle=:dash, alpha=0.5)
 

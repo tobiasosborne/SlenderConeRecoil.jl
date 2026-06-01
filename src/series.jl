@@ -1,5 +1,13 @@
 # Series expansion in a small parameter — mirrors TensorGR perturbation pattern.
-# expand_in(expr, param, order) — Taylor expand expression tree in param to given order
+# Supported grammar:
+#   - finite sums/products over the expression tree;
+#   - integer ε-powers, including Laurent terms ε^k for k < 0;
+#   - negative integer powers of ε-dependent bases, expanded around the
+#     lowest nonzero integer ε-order with an ε-free leading coefficient;
+#   - noninteger powers and functions only when they are ε-free coefficients.
+# Half-integer/multiple-scale source asymptotics such as sqrt(ε) or
+# sin(ξ/sqrt(ε)) are intentionally not implemented here.
+# expand_in(expr, param, order) — expand expression tree in param to given order
 # collect_order(expr, param, n) — extract coefficient of param^n
 
 export expand_in, collect_order
@@ -8,12 +16,63 @@ export expand_in, collect_order
 """
     expand_in(expr, ε, order)
 
-Symbolically expand `expr` as a power series in `ε` up to `O(ε^order)`.
-Returns an Add of terms, each a coefficient times ε^k.
+Symbolically expand `expr` as an integer-power series in `ε` up to
+`O(ε^order)`. Laurent terms are supported when negative integer powers are
+expanded around a nonzero symbolic leading coefficient.
+
+The supported grammar is deliberately small: sums, products, integer powers
+involving `ε`, and ε-free coefficients. Noninteger powers and functions are
+allowed only when independent of `ε`. Source-specific half-integer or
+multiple-scale expansions, for example `sqrt(ε)` or `sin(ξ/sqrt(ε))`, throw
+`ArgumentError` instead of being silently treated as coefficients.
 """
 function expand_in(expr::SExpr, ε::Sym, order::Int)::SExpr
+    order >= 0 ||
+        throw(ArgumentError("series expansion order must be nonnegative; got $order"))
+    _require_supported_series_grammar(expr, ε)
     # Strategy: recursively expand each node type, truncating at `order`.
     _expand(expr, ε, order)
+end
+
+function _depends_on(e::SExpr, ε::Sym)::Bool
+    e isa Num && return false
+    e isa Sym && return e == ε
+    e isa Add && return any(t -> _depends_on(t, ε), e.terms)
+    e isa Mul && return any(f -> _depends_on(f, ε), e.factors)
+    e isa Pow && return _depends_on(e.base, ε) || _depends_on(e.exp, ε)
+    e isa Func && return any(a -> _depends_on(a, ε), e.args)
+    false
+end
+
+function _require_supported_series_grammar(e::SExpr, ε::Sym)::Nothing
+    if e isa Num || e isa Sym
+        return nothing
+    elseif e isa Add
+        foreach(t -> _require_supported_series_grammar(t, ε), e.terms)
+    elseif e isa Mul
+        foreach(f -> _require_supported_series_grammar(f, ε), e.factors)
+    elseif e isa Pow
+        if e.exp isa Num && isinteger(e.exp.val)
+            _require_supported_series_grammar(e.base, ε)
+            return nothing
+        end
+        if _depends_on(e, ε)
+            throw(ArgumentError(
+                "unsupported ε-expansion grammar: noninteger powers involving " *
+                "$(ε.name) are not implemented; supported ε powers are integers/Laurent terms"
+            ))
+        end
+    elseif e isa Func
+        if any(a -> _depends_on(a, ε), e.args)
+            throw(ArgumentError(
+                "unsupported ε-expansion grammar: functions with $(ε.name)-dependent " *
+                "arguments are not expanded; use ε-free function coefficients"
+            ))
+        end
+    else
+        throw(ArgumentError("unsupported ε-expansion expression type $(typeof(e))"))
+    end
+    nothing
 end
 
 function _expand(e::Num, ε::Sym, order::Int)::SExpr

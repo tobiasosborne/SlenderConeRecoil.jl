@@ -32,6 +32,20 @@ Near the tip, the current nonlinear ODEs are solved by shooting from ξ₀ with 
 
 Far from the tip, the current code linearises about the undisturbed cone S = εξ, U = 0. The perturbation (s₁, u₁) satisfies a linear ODE with ξ-dependent coefficients, integrated inward from large ξ. The correct Decent--King outer matching conditions still need primary-source verification.
 
+The local CAS hierarchy check in `src/outer_hierarchy.jl` supports only the
+package's explicit integer-power ansatz
+
+    S = εξ + ε³σ₁ + ε⁵σ₂
+    U = ε²ω₁ + ε⁴ω₂
+
+and the series grammar implemented by `src/series.jl`: finite sums and
+products, integer powers of ε including Laurent terms, and negative integer
+powers of ε-dependent bases expanded around a symbolic nonzero leading
+coefficient. Noninteger powers and functions may appear only as ε-free
+coefficients. Half-integer powers, stretched or multiple-scale variables, and
+oscillatory source-specific hierarchies such as sin(ξ/sqrt(ε)) are not
+implemented and should not be described as Decent--King source-backed.
+
 ### 5. Composite solution (`src/composite.jl`)
 
 Additive composite: S_comp = S_inner + S_outer - S_overlap, where S_overlap is the common asymptotic form in the intermediate region.
@@ -63,6 +77,7 @@ Figures are saved to `figures/` as tracked PDF/PNG pairs with
 | `src/similarity.jl` | Keller-Miksis similarity ODEs |
 | `src/inner.jl` | Nonlinear BVP near tip |
 | `src/outer.jl` | Linearised capillary wave problem |
+| `src/outer_hierarchy.jl` | Local integer/Laurent ε hierarchy check, not a source-backed higher-order derivation |
 | `src/composite.jl` | Matched asymptotic composite |
 | `src/pde.jl` | Full 1D PDE (method of lines) |
 

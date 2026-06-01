@@ -22,7 +22,7 @@ The project has four layers, each in its own source file(s):
 
 **Inner BVP solver** (`src/inner.jl`). Solves the reconstructed nonlinear similarity ODEs as a 4-component system $[S,\, S',\, S'',\, U]$ with the dispersive $S'''$ term from axial curvature. Shooting from the tip with $S'(\xi_0)=0$ (rounded tip), $U(\xi_0)=\tfrac{4}{5}\xi_0$ (local regularity condition), integrated with Rodas5P. Three far-field conditions (slope, velocity, curvature decay) are matched by 3D damped Newton. These conditions and constants are local implementation data, not paper benchmarks.
 
-**Outer solver and matched composite** (`src/outer.jl`, `src/outer_hierarchy.jl`, `src/composite.jl`). The repository contains hand-coded and CAS-assisted checks of a candidate linearised outer ODE using the ansatz $S = \varepsilon\xi + \varepsilon^3\sigma_1 + \varepsilon^5\sigma_2$. Source-confirmed outer boundary conditions, matching constants, and composite formulae are still blocked on the 2008 article body. The current additive composite uses a fitted linear common part as a local diagnostic construction.
+**Outer solver and matched composite** (`src/outer.jl`, `src/outer_hierarchy.jl`, `src/composite.jl`). The repository contains hand-coded and CAS-assisted checks of a candidate linearised outer ODE using the local ansatz $S = \varepsilon\xi + \varepsilon^3\sigma_1 + \varepsilon^5\sigma_2$, $U = \varepsilon^2\omega_1 + \varepsilon^4\omega_2$. The supported CAS expansion grammar is finite integer-power/Laurent series in $\varepsilon$ with $\varepsilon$-free symbolic coefficients; noninteger powers and functions are allowed only as $\varepsilon$-free coefficients. Source-specific half-integer and multiple-scale oscillatory hierarchies are not implemented. Source-confirmed outer boundary conditions, matching constants, and composite formulae are still blocked on the 2008 article body. The current additive composite uses a fitted linear common part as a local diagnostic construction.
 
 **PDE verification** (`src/pde.jl`). The time-dependent 1D slender model is solved directly by method of lines: 2nd-order finite differences on a tanh-stretched grid, implicit FBDF time integration. Rescaling PDE snapshots to similarity variables is used as an internal consistency check against the computed $S(\xi)$.
 
@@ -62,7 +62,7 @@ The reconstructed velocity field $U(\xi)$ peaks near the tip in the current sign
 
 ### Matched asymptotic composite
 
-The current composite blends the local inner solution with the local outer solution to give a single reconstructed profile. The CAS-derived hierarchy is an internal algebra check for the package's current $S,U$ equations; its $\varepsilon$-power structure and higher-order terms have not yet been cross-checked against the paper's asymptotic ordering.
+The current composite blends the local inner solution with the local outer solution to give a single reconstructed profile. The CAS-derived hierarchy is an internal algebra check for the package's current $S,U$ equations. It is limited to the integer/Laurent grammar described above and is not a Decent--King source-backed higher-order hierarchy.
 
 ![Matched asymptotic](figures/fig6_matched_asymptotic.png)
 
@@ -119,7 +119,7 @@ reproducibility artifacts.
 | `src/similarity.jl` | Keller--Miksis similarity reduction to ODEs |
 | `src/inner.jl` | Inner BVP: 3D Newton shooting, Rodas5P, 4-component ODE |
 | `src/outer.jl` | Outer linearised problem, 4-component with $S'''$ |
-| `src/outer_hierarchy.jl` | CAS-derived $\varepsilon$-hierarchy, full nonlinear outer solver |
+| `src/outer_hierarchy.jl` | Local integer/Laurent $\varepsilon$-hierarchy check, full nonlinear outer solver |
 | `src/composite.jl` | Additive composite matching |
 | `src/pde.jl` | Time-dependent PDE: FBDF, non-uniform FD, $R_{zzz}$ |
 | `scripts/figures.jl` | All figure generation |
@@ -129,7 +129,7 @@ reproducibility artifacts.
 - Source fidelity is under review. The authoritative status labels are in `docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md`. The intended primary source is Decent and King (2008), *IMA Journal of Applied Mathematics* 73(1), 37--68, DOI `10.1093/imamat/hxm043`; the article body is not yet locally available, and previous documentation incorrectly cited a QJMAM DOI as the cone paper.
 - The 3D Newton BVP converges to ~2% far-field slope error. A continuation or homotopy method would improve this.
 - The PDE solver is limited to $t \lesssim 0.04$ by stiffness from capillary pressure near the truncated tip. Adaptive mesh refinement would help.
-- The outer expansion is formally leading-order. The CAS machinery for higher orders exists but the $\varepsilon$-power structure mixes oddly with the similarity scaling (the base state has a nonzero momentum residual at $O(\varepsilon^{-1})$).
+- The higher-order outer CAS is local/internal. It supports only finite integer-power/Laurent $\varepsilon$ expansions around symbolic nonzero leading coefficients; Decent--King source-specific half-integer and multiple-scale oscillatory outer hierarchies are not implemented.
 
 ## References
 

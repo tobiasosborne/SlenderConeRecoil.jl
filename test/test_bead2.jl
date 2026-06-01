@@ -82,6 +82,45 @@ using SlenderConeRecoil
         @test !occursin("1//0", sprint(show, expanded))
     end
 
+    @testset "explicit integer/Laurent grammar with ε-free coefficients" begin
+        y = Sym(:y)
+        sqrtx = pow(x, Num(1//2))
+        sinx = Func(:sin, SExpr[x])
+        expr = add(mul(pow(ε, Num(-1)), x),
+                   sinx,
+                   mul(ε, sqrtx),
+                   mul(pow(ε, Num(2)), y))
+        expanded = expand_in(expr, ε, 2)
+
+        @test collect_order(expanded, ε, -1) == x
+        @test collect_order(expanded, ε, 0) == sinx
+        @test collect_order(expanded, ε, 1) == sqrtx
+        @test collect_order(expanded, ε, 2) == y
+    end
+
+    @testset "unsupported half-integer and multiple-scale grammar fails clearly" begin
+        ξ = Sym(:ξ)
+        unsupported = (
+            pow(ε, Num(1//2)),
+            pow(add(Num(1), ε), Num(1//2)),
+            Func(:sin, SExpr[mul(ξ, pow(ε, Num(-1//2)))]),
+        )
+
+        for expr in unsupported
+            err = try
+                expand_in(expr, ε, 3)
+                nothing
+            catch caught
+                caught
+            end
+            @test err isa ArgumentError
+            @test occursin("unsupported ε-expansion grammar",
+                           sprint(showerror, err))
+        end
+
+        @test_throws ArgumentError expand_in(Num(1), ε, -1)
+    end
+
     @testset "negative powers of zero fail clearly" begin
         @test_throws ArgumentError pow(Num(0), Num(-1))
     end

@@ -16,4 +16,25 @@ using SlenderConeRecoil
         @test eqs[-1].mass == Num(0)
         @test eval_sexpr(eqs[-1].momentum, Dict(:ξ => 2.0)) ≈ -0.25
     end
+
+    @testset "hierarchy grammar is explicit integer/Laurent local algebra" begin
+        ε = Sym(:ε)
+        eqs = derive_outer_equations(order=5)
+        rendered = sprint(show, eqs)
+
+        @test all(k -> k isa Int, keys(eqs))
+        @test !occursin("1//2", rendered)
+        @test !occursin("sqrt", rendered)
+        @test_throws ArgumentError derive_outer_equations(order=-1)
+
+        err = try
+            expand_in(pow(ε, Num(1//2)), ε, 3)
+            nothing
+        catch caught
+            caught
+        end
+        @test err isa ArgumentError
+        @test occursin("integer", sprint(showerror, err))
+        @test occursin("Laurent", sprint(showerror, err))
+    end
 end
