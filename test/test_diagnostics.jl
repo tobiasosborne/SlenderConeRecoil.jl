@@ -107,6 +107,16 @@ end
     @test pde_result.diagnostics.problem_kind == :pde_verification
     @test pde_result.diagnostics.successful
     @test pde_result.diagnostics.minimum_radius > 0
+    @test pde_result.diagnostics.radius_positivity_margin > 0
+    @test pde_result.diagnostics.pde_data_valid
+    @test pde_result.diagnostics.grid_strictly_increasing
+    @test pde_result.diagnostics.retcode_string == "Success"
+    @test pde_result.diagnostics.retcode_successful
+    @test pde_result.diagnostics.endpoint_reached
+    @test pde_result.diagnostics.saved_time_points == 1
+    @test pde_result.diagnostics.initial_area_mass ≈
+          pde_result.diagnostics.final_area_mass
+    @test pde_result.diagnostics.max_abs_area_mass_balance_residual == 0.0
 end
 
 @testset "Mesh and domain helpers reject ambiguous NamedTuples" begin
@@ -114,4 +124,31 @@ end
     @test domain_summary([1.0, 1.5, 2.5]; variable=:ξ).domain_span ≈ 1.5
     @test_throws ArgumentError mesh_summary((q=[1.0, 2.0],))
     @test_throws ArgumentError domain_summary((q_min=1.0, q_max=2.0))
+end
+
+@testset "PDE diagnostics gate invalid figure inputs" begin
+    z = [1.0, 1.5, 2.0]
+    times = [0.0, 0.1]
+    R = [[1.0, 1.0, 1.0], [1.1, 1.1, 1.1]]
+    u = [[0.0, 0.1, 0.2], [0.0, 0.1, 0.2]]
+    diagnostics = (context="manual PDE",
+                   retcode=:Success,
+                   successful=true,
+                   endpoint=0.1,
+                   requested_endpoint=0.1,
+                   saved_points=2)
+
+    valid = PDESolution(z, times, R, u, 0.1, diagnostics)
+    invalid_R = deepcopy(R)
+    invalid_R[2][2] = 0.0
+    invalid = PDESolution(z, times, invalid_R, u, 0.1, diagnostics)
+
+    function require_figure_diagnostics(x)
+        diagnostics_succeeded(x) ||
+            error("figure diagnostics failed; refusing to write figure metadata")
+        true
+    end
+
+    @test require_figure_diagnostics(valid)
+    @test_throws ErrorException require_figure_diagnostics(invalid)
 end

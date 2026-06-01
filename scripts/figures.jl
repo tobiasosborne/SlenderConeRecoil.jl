@@ -182,7 +182,8 @@ function _require_successful_figure_diagnostics(label::AbstractString, diagnosti
         error("$label diagnostics failed; refusing to write figure metadata")
 end
 
-function write_figure_metadata(; sol=nothing, outer_linearised=nothing, outer_full=nothing)
+function write_figure_metadata(; sol=nothing, outer_linearised=nothing,
+                               outer_full=nothing, pde=nothing)
     path = joinpath(FIGDIR, "metadata.toml")
     generated_at = Dates.format(Dates.now(), dateformat"yyyy-mm-ddTHH:MM:SS")
     package_version = _project_version()
@@ -191,6 +192,7 @@ function write_figure_metadata(; sol=nothing, outer_linearised=nothing, outer_fu
     _require_successful_figure_diagnostics("inner solution", sol)
     _require_successful_figure_diagnostics("outer linearised", outer_linearised)
     _require_successful_figure_diagnostics("outer full", outer_full)
+    _require_successful_figure_diagnostics("PDE solution", pde)
     inner_wave = sol === nothing ? nothing :
                  wave_diagnostics(sol; epsilon=FIGURE_EPSILON)
     open(path, "w") do io
@@ -244,6 +246,7 @@ function write_figure_metadata(; sol=nothing, outer_linearised=nothing, outer_fu
 
         _write_diagnostics(io, "outer_linearised_diagnostics", outer_linearised)
         _write_diagnostics(io, "outer_full_diagnostics", outer_full)
+        _write_diagnostics(io, "pde_solution_diagnostics", pde)
     end
     println("Metadata saved: ", relpath(path, PROJECT_ROOT))
     path

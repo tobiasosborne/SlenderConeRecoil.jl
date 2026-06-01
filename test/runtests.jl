@@ -65,6 +65,7 @@ end
         :derive_outer_equations, :eval_sexpr, :solve_outer_full,
         :solve_outer_linearised, :HierarchySolution,
         :solve_pde, :PDESolution, :rescale_to_similarity,
+        :pde_conservation_diagnostics,
         :AbstractRecoilProblem,
         :ConeSimilarityProblem, :OuterMatchingProblem,
         :CompositeProfileProblem, :PDEVerificationProblem,

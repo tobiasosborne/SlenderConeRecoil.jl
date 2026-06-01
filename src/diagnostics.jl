@@ -227,10 +227,46 @@ function diagnostics_succeeded(sol::HierarchySolution)
 end
 
 function diagnostics_succeeded(sol::PDESolution)
-    diagnostics_succeeded(sol.diagnostics) && _finite_vector(sol.z) &&
-        _finite_vector(sol.t_snapshots) &&
-        all(_finite_vector, sol.R) && all(_finite_vector, sol.u) &&
-        all(r -> all(>(0), r), sol.R)
+    diagnostics_succeeded(sol.diagnostics) || return false
+    _pde_solution_data_valid(sol) || return false
+
+    diagnostics = sol.diagnostics
+    for field in (:pde_data_valid, :finite_state, :positive_radius,
+                  :grid_strictly_increasing, :grid_finite, :time_finite,
+                  :time_strictly_increasing)
+        if haskey(diagnostics, field)
+            value = getfield(diagnostics, field)
+            value isa Bool && value || return false
+        end
+    end
+    if haskey(diagnostics, :retcode_successful)
+        value = diagnostics.retcode_successful
+        if value !== missing && !(value isa Bool && value)
+            return false
+        end
+    end
+    if haskey(diagnostics, :endpoint_reached)
+        value = diagnostics.endpoint_reached
+        if value !== missing && !(value isa Bool && value)
+            return false
+        end
+    end
+    if haskey(diagnostics, :minimum_radius) &&
+       !(isfinite(diagnostics.minimum_radius) && diagnostics.minimum_radius > 0)
+        return false
+    end
+    if haskey(diagnostics, :radius_positivity_margin) &&
+       !(isfinite(diagnostics.radius_positivity_margin) &&
+         diagnostics.radius_positivity_margin > 0)
+        return false
+    end
+    if haskey(diagnostics, :saved_points_match_reported) &&
+       diagnostics.saved_points_match_reported !== missing &&
+       !(diagnostics.saved_points_match_reported isa Bool &&
+         diagnostics.saved_points_match_reported)
+        return false
+    end
+    true
 end
 
 function _inner_diagnostic_checks(sol::InnerSolution)
@@ -260,9 +296,36 @@ end
 function _pde_diagnostic_checks(sol::PDESolution)
     radii = isempty(sol.R) ? Float64[] : reduce(vcat, sol.R)
     velocities = isempty(sol.u) ? Float64[] : reduce(vcat, sol.u)
-    (minimum_radius=_min_or_nan(radii),
-     maximum_radius=_max_or_nan(radii),
-     maximum_abs_velocity=_max_abs_or_nan(velocities))
+    diagnostics = sol.diagnostics
+    (minimum_radius=get(diagnostics, :minimum_radius, _min_or_nan(radii)),
+     radius_positivity_margin=
+         get(diagnostics, :radius_positivity_margin, _min_or_nan(radii)),
+     maximum_radius=get(diagnostics, :maximum_radius, _max_or_nan(radii)),
+     maximum_abs_velocity=
+         get(diagnostics, :maximum_abs_velocity, _max_abs_or_nan(velocities)),
+     grid_spacing_min=get(diagnostics, :grid_spacing_min, NaN),
+     grid_spacing_max=get(diagnostics, :grid_spacing_max, NaN),
+     grid_spacing_ratio=get(diagnostics, :grid_spacing_ratio, NaN),
+     grid_strictly_increasing=
+         get(diagnostics, :grid_strictly_increasing, false),
+     saved_time_points=get(diagnostics, :saved_time_points,
+                           length(sol.t_snapshots)),
+     state_snapshots=get(diagnostics, :state_snapshots, length(sol.R)),
+     retcode_string=get(diagnostics, :retcode_string,
+                        string(get(diagnostics, :retcode, nothing))),
+     retcode_successful=get(diagnostics, :retcode_successful, false),
+     endpoint_reached=get(diagnostics, :endpoint_reached, false),
+     initial_area_mass=get(diagnostics, :initial_area_mass, NaN),
+     final_area_mass=get(diagnostics, :final_area_mass, NaN),
+     final_area_mass_drift=get(diagnostics, :final_area_mass_drift, NaN),
+     final_relative_area_mass_drift=
+         get(diagnostics, :final_relative_area_mass_drift, NaN),
+     max_abs_area_mass_balance_residual=
+         get(diagnostics, :max_abs_area_mass_balance_residual, NaN),
+     max_abs_left_boundary_area_flux=
+         get(diagnostics, :max_abs_left_boundary_area_flux, NaN),
+     max_abs_right_boundary_area_flux=
+         get(diagnostics, :max_abs_right_boundary_area_flux, NaN))
 end
 
 function diagnostic_summary(sol::InnerSolution; problem_kind::Symbol=:cone_similarity)

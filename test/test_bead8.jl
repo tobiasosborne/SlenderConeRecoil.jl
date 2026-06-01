@@ -212,6 +212,124 @@ _observed_order(coarse, fine, component::Symbol) =
         @test pde.diagnostics.saved_points == length(pde.t_snapshots)
     end
 
+    @testset "PDE conservation and domain diagnostics" begin
+        pde = solve_pde(ε=0.1, N=50, z_min=1.0, z_max=10.0,
+                        t_end=0.01, n_snapshots=2)
+        diagnostics = pde.diagnostics
+
+        @test diagnostics_succeeded(pde)
+        @test diagnostics.pde_data_valid
+        @test diagnostics.finite_state
+        @test diagnostics.positive_radius
+        @test diagnostics.minimum_radius > 0
+        @test diagnostics.radius_positivity_margin == diagnostics.minimum_radius
+        @test diagnostics.grid_finite
+        @test diagnostics.grid_strictly_increasing
+        @test diagnostics.grid_spacing_min > 0
+        @test diagnostics.grid_spacing_max ≥ diagnostics.grid_spacing_min
+        @test diagnostics.grid_spacing_ratio ≥ 1
+        @test diagnostics.saved_time_points == length(pde.t_snapshots)
+        @test diagnostics.state_snapshots == length(pde.R)
+        @test diagnostics.saved_points_match_reported
+        @test diagnostics.time_finite
+        @test diagnostics.time_strictly_increasing
+        @test diagnostics.time_step_min > 0
+        @test diagnostics.retcode_string == "Success"
+        @test diagnostics.retcode_successful
+        @test diagnostics.endpoint_reached
+        @test diagnostics.solver_steps === missing ||
+              diagnostics.solver_steps ≥ 0
+
+        @test length(diagnostics.area_mass) == length(pde.t_snapshots)
+        @test diagnostics.initial_area_mass == first(diagnostics.area_mass)
+        @test diagnostics.final_area_mass == last(diagnostics.area_mass)
+        @test diagnostics.area_mass_drift[1] == 0.0
+        @test diagnostics.relative_area_mass_drift[1] == 0.0
+        @test isfinite(diagnostics.final_area_mass_drift)
+        @test isfinite(diagnostics.final_relative_area_mass_drift)
+        @test length(diagnostics.left_boundary_area_flux) == length(pde.t_snapshots)
+        @test length(diagnostics.right_boundary_area_flux) == length(pde.t_snapshots)
+        @test diagnostics.boundary_integrated_area_mass_change[1] == 0.0
+        @test diagnostics.area_mass_balance_residual[1] == 0.0
+        @test isfinite(diagnostics.final_area_mass_balance_residual)
+        @test isfinite(diagnostics.max_abs_area_mass_balance_residual)
+        @test diagnostics.pde_diagnostic_source_status == "IMPL-inferred"
+        @test occursin("not Decent-King benchmark",
+                       diagnostics.pde_diagnostic_basis)
+    end
+
+    @testset "PDE conservation diagnostics validation" begin
+        z = [1.0, 1.5, 2.0]
+        times = [0.0, 0.1]
+        R = [[1.0, 1.0, 1.0], [1.1, 1.1, 1.1]]
+        u = [[0.0, 0.1, 0.2], [0.0, 0.1, 0.2]]
+
+        diagnostics = pde_conservation_diagnostics(
+            z, times, R, u; retcode=:Success, endpoint=0.1,
+            requested_endpoint=0.1, saved_points=2)
+        @test diagnostics.initial_area_mass ≈ 1.0
+        @test diagnostics.final_area_mass ≈ 1.21
+        @test diagnostics.retcode_successful
+        @test diagnostics.endpoint_reached
+        @test diagnostics.saved_points_match_reported
+
+        @test_throws ArgumentError pde_conservation_diagnostics(
+            [1.0, 1.0, 2.0], times, R, u)
+        @test_throws ArgumentError pde_conservation_diagnostics(
+            z, [0.0, 0.0], R, u)
+
+        R_bad = deepcopy(R)
+        R_bad[2][2] = 0.0
+        @test_throws DomainError pde_conservation_diagnostics(
+            z, times, R_bad, u)
+
+        R_nan = deepcopy(R)
+        R_nan[1][2] = NaN
+        @test_throws DomainError pde_conservation_diagnostics(
+            z, times, R_nan, u)
+
+        u_bad = deepcopy(u)
+        u_bad[1][2] = Inf
+        @test_throws DomainError pde_conservation_diagnostics(
+            z, times, R, u_bad)
+    end
+
+    @testset "PDE diagnostic success hard checks" begin
+        z = [1.0, 1.5, 2.0]
+        times = [0.0, 0.1]
+        R = [[1.0, 1.0, 1.0], [1.1, 1.1, 1.1]]
+        u = [[0.0, 0.1, 0.2], [0.0, 0.1, 0.2]]
+        ok = (context="manual PDE",
+              retcode=:Success,
+              successful=true,
+              endpoint=0.1,
+              requested_endpoint=0.1,
+              saved_points=2)
+
+        @test diagnostics_succeeded(PDESolution(z, times, R, u, 0.1, ok))
+
+        failed_retcode = merge(ok, (retcode=:MaxIters, successful=false))
+        @test !diagnostics_succeeded(
+            PDESolution(z, times, R, u, 0.1, failed_retcode))
+
+        missed_endpoint = merge(ok, (endpoint=0.05,))
+        @test !diagnostics_succeeded(
+            PDESolution(z, times, R, u, 0.1, missed_endpoint))
+
+        R_bad = deepcopy(R)
+        R_bad[1][2] = -0.1
+        bad_radius = PDESolution(z, times, R_bad, u, 0.1, ok)
+        @test !diagnostics_succeeded(bad_radius)
+        @test !diagnostic_summary(bad_radius).successful
+
+        u_bad = deepcopy(u)
+        u_bad[2][3] = NaN
+        @test !diagnostics_succeeded(PDESolution(z, times, R, u_bad, 0.1, ok))
+
+        @test !diagnostics_succeeded(
+            PDESolution([1.0, 1.0, 2.0], times, R, u, 0.1, ok))
+    end
+
     @testset "Initial condition preserved at t≈0" begin
         pde = solve_pde(ε=0.1, N=50, z_min=1.0, z_max=10.0,
                         t_end=0.001, n_snapshots=2)
