@@ -42,6 +42,10 @@ The full 1D PDE is solved by method of lines (2nd-order FD on a non-uniform stre
 
 ## How to run
 
+Dependency placement for core solvers, optional solver extensions, plotting,
+benchmarks, and paper tooling is documented in
+[`docs/dependency_policy.md`](dependency_policy.md).
+
 ```bash
 julia --project=scripts scripts/figures.jl
 ```

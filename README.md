@@ -71,6 +71,8 @@ The current composite blends the local inner solution with the local outer solut
 Requires Julia 1.10+. The package runtime depends on
 DifferentialEquations.jl; figure generation uses the separate `scripts`
 environment so plotting does not become a library dependency.
+The dependency and optional-extension policy is documented in
+[`docs/dependency_policy.md`](docs/dependency_policy.md).
 
 ```bash
 # Instantiate package and figure-tool environments

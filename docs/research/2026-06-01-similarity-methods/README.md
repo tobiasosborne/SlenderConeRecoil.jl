@@ -29,6 +29,10 @@ Reports:
 - `05_package_upgrade_plan.md`
 - `06_decent_king_source_ledger.md`
 
+The accepted dependency and optional-extension policy for upgrade-plan item
+`UP-API4` is recorded in
+[`../../dependency_policy.md`](../../dependency_policy.md).
+
 Source-inventory corrections made during this research pass:
 
 - Billingham (1999) fat wedge/cone DOI is `10.1017/S0022112099006047`; the
