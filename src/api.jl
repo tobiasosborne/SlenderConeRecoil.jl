@@ -59,23 +59,55 @@ const OuterMatchingResult = ProblemResult{OuterMatchingProblem,OuterSolution}
 const CompositeProfileResult = ProblemResult{CompositeProfileProblem,CompositeSolution}
 const PDEVerificationResult = ProblemResult{PDEVerificationProblem,PDESolution}
 
-const _SOURCE_LEDGER_PATH =
-    "docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md"
-const _CANONICAL_CONE_DOI = "10.1093/imamat/hxm043"
-
-function _base_provenance(kind::Symbol)
+function _base_provenance(kind::Symbol; solver_settings::NamedTuple=(;),
+                          benchmark_ids=(), artifacts=())
+    metadata = default_recoil_provenance_metadata(
+        kind; solver_settings=solver_settings, benchmark_ids=benchmark_ids,
+        artifacts=artifacts)
+    metadata_fields = _provenance_metadata_fields(metadata)
     (problem_kind=kind,
-     source_status="IMPL-inferred",
+     source_status=_DEFAULT_SOURCE_STATUS,
      source_ledger=_SOURCE_LEDGER_PATH,
      canonical_source_doi=_CANONICAL_CONE_DOI,
      status_note="Current primitive-variable equations, boundary data, matching, and numerical constants are local reconstructed implementation data unless the source ledger marks a fact as C2001 or C2008-meta.",
-     implementation_status="local reconstruction pending Decent-King 2008 article body")
+     implementation_status="local reconstruction pending Decent-King 2008 article body",
+     metadata=metadata,
+     metadata_fields...)
 end
 
-_merge_provenance(kind::Symbol, provenance::NamedTuple) =
-    merge(_base_provenance(kind), provenance)
+_stored_user_provenance(provenance::NamedTuple) =
+    haskey(provenance, :user_provenance) ? provenance.user_provenance : provenance
 
-_merge_provenance(kind::Symbol, provenance) =
+_provenance_metadata_fields(metadata::ProvenanceMetadata) =
+    (source_citations=metadata.source_citations,
+     source_ids=metadata.source_ids,
+     assumptions=metadata.assumptions,
+     benchmark_ids=metadata.benchmark_ids,
+     solver_settings=metadata.solver_settings,
+     artifacts=metadata.artifacts,
+     package=metadata.package)
+
+function _merge_provenance(kind::Symbol, provenance::NamedTuple;
+                           solver_settings::NamedTuple=(;),
+                           benchmark_ids=(), artifacts=())
+    user_provenance = _stored_user_provenance(provenance)
+    user_provenance isa NamedTuple ||
+        throw(ArgumentError("provenance.user_provenance must be a NamedTuple; got $(typeof(user_provenance))"))
+    merged = merge(_base_provenance(kind; solver_settings=solver_settings,
+                                    benchmark_ids=benchmark_ids,
+                                    artifacts=artifacts),
+                   user_provenance,
+                   (user_provenance=user_provenance,))
+    if haskey(user_provenance, :metadata)
+        metadata = user_provenance.metadata
+        metadata isa ProvenanceMetadata ||
+            throw(ArgumentError("provenance.metadata must be a ProvenanceMetadata; got $(typeof(metadata))"))
+        merged = merge(merged, _provenance_metadata_fields(metadata))
+    end
+    merged
+end
+
+_merge_provenance(kind::Symbol, provenance; kwargs...) =
     throw(ArgumentError("provenance must be a NamedTuple; got $(typeof(provenance))"))
 
 function _require_positive_finite(name::AbstractString, x)
@@ -157,12 +189,15 @@ function ConeSimilarityProblem(; ε::Real=0.1, epsilon::Union{Nothing,Real}=noth
     _require_positive_int("ode_maxiters", ode_maxiters)
     _require_positive_finite("newton_tol", tol)
 
-    ConeSimilarityProblem((ε=εv, ξ₀=ξ₀v, S₀=S₀v, Sξξ₀=Sξξ₀v),
-                          (ξ_max=ξ_maxv,),
-                          (newton_iters=newton_iters, newton_tol=tol,
-                           ode_maxiters=ode_maxiters,
-                           throw_on_failure=throw_on_failure),
-                          _merge_provenance(:cone_similarity, provenance))
+    parameters = (ε=εv, ξ₀=ξ₀v, S₀=S₀v, Sξξ₀=Sξξ₀v)
+    domain = (ξ_max=ξ_maxv,)
+    solver = (newton_iters=newton_iters, newton_tol=tol,
+              ode_maxiters=ode_maxiters,
+              throw_on_failure=throw_on_failure)
+    ConeSimilarityProblem(parameters, domain, solver,
+                          _merge_provenance(
+                              :cone_similarity, provenance;
+                              solver_settings=merge(parameters, domain, solver)))
 end
 
 """
@@ -184,11 +219,13 @@ function OuterMatchingProblem(inner; ξ_match::Real=15.0, ξ_max::Real=100.0,
     _require_positive_int("maxiters", maxiters)
     _require_inner_solution_payload(inner; context="OuterMatchingProblem")
 
-    OuterMatchingProblem(inner,
-                         (ε_source=:inferred_from_inner,),
-                         (ξ_match=ξ_matchv, ξ_max=ξ_maxv),
-                         (maxiters=maxiters,),
-                         _merge_provenance(:outer_matching, provenance))
+    parameters = (ε_source=:inferred_from_inner,)
+    domain = (ξ_match=ξ_matchv, ξ_max=ξ_maxv)
+    solver = (maxiters=maxiters,)
+    OuterMatchingProblem(inner, parameters, domain, solver,
+                         _merge_provenance(
+                             :outer_matching, provenance;
+                             solver_settings=merge(parameters, domain, solver)))
 end
 
 """
@@ -209,11 +246,13 @@ function CompositeProfileProblem(inner, outer; ξ_grid=nothing, n_points::Int=50
     match === nothing || _require_finite("ξ_match", match)
     _require_inner_solution_payload(inner; context="CompositeProfileProblem inner")
     _require_outer_solution_payload(outer; context="CompositeProfileProblem outer")
-    CompositeProfileProblem(inner, outer,
-                            (ε_source=:from_outer_solution,),
-                            (ξ_match=match,),
-                            (ξ_grid=grid, n_points=n_points),
-                            _merge_provenance(:composite_profile, provenance))
+    parameters = (ε_source=:from_outer_solution,)
+    domain = (ξ_match=match,)
+    solver = (ξ_grid=grid, n_points=n_points)
+    CompositeProfileProblem(inner, outer, parameters, domain, solver,
+                            _merge_provenance(
+                                :composite_profile, provenance;
+                                solver_settings=merge(parameters, domain, solver)))
 end
 
 """
@@ -243,11 +282,14 @@ function PDEVerificationProblem(; ε::Real=0.1, epsilon::Union{Nothing,Real}=not
     _require_positive_int("n_snapshots", n_snapshots)
     _require_positive_int("maxiters", maxiters)
 
-    PDEVerificationProblem((ε=εv,),
-                           (z_min=z_minv, z_max=z_maxv, t_end=t_endv),
-                           (N=N, n_snapshots=n_snapshots,
-                            maxiters=maxiters),
-                           _merge_provenance(:pde_verification, provenance))
+    parameters = (ε=εv,)
+    domain = (z_min=z_minv, z_max=z_maxv, t_end=t_endv)
+    solver = (N=N, n_snapshots=n_snapshots,
+              maxiters=maxiters)
+    PDEVerificationProblem(parameters, domain, solver,
+                           _merge_provenance(
+                               :pde_verification, provenance;
+                               solver_settings=merge(parameters, domain, solver)))
 end
 
 function _inner_result_diagnostics(sol::InnerSolution)
