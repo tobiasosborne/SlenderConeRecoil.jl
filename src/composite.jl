@@ -30,7 +30,7 @@ CompositeSolution(ξ, S, U, ε) =
     CompositeSolution(ξ, S, U, ε,
                       (overlap_slope=NaN, overlap_intercept=NaN,
                        ξ_match=NaN, ξ_min=NaN, ξ_max=NaN,
-                       fit_points=0))
+                       fit_points=0, successful=false))
 
 # ── Overlap extraction ─────────────────────────────────────────────────
 """
@@ -128,7 +128,8 @@ function composite_solution(inner::InnerSolution, outer::OuterSolution;
                    ξ_match=fit.ξ_match,
                    ξ_min=ξ_min,
                    ξ_max=ξ_max,
-                   fit_points=fit.fit_points)
+                   fit_points=fit.fit_points,
+                   successful=true)
     CompositeSolution(ξ_grid, S_comp, U_comp, ε, diagnostics)
 end
 

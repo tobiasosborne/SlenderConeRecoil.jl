@@ -38,6 +38,8 @@ end
     @test cone_result.domain.ξ₀ == 1.0
     @test cone_result.mesh.ξ === inner.ξ
     @test cone_result.diagnostics.mesh_points == 5
+    @test cone_result.diagnostics.problem_kind == :cone_similarity
+    @test !cone_result.diagnostics.successful
     @test cone_result.provenance.source_status == "IMPL-inferred"
 
     outer = OuterSolution([2.0, 3.0, 4.0], zeros(3), zeros(3), zeros(3),
@@ -49,6 +51,7 @@ end
     @test outer_result.domain.ξ_match == 2.0
     @test outer_result.mesh.ξ === outer.ξ
     @test outer_result.diagnostics.mesh_points == 3
+    @test outer_result.diagnostics.problem_kind == :outer_matching
 
     composite_problem = CompositeProfileProblem(cone_result, outer_result;
                                                 ξ_grid=[2.0, 3.0, 4.0],
@@ -59,6 +62,8 @@ end
     @test composite_result.mesh.ξ == [2.0, 3.0, 4.0]
     @test composite_result.parameters.ε == 0.1
     @test haskey(composite_result.diagnostics, :overlap_slope)
+    @test composite_result.diagnostics.problem_kind == :composite_profile
+    @test composite_result.diagnostics.successful
     @test composite_result.provenance.source_status == "IMPL-inferred"
 
     pde_problem = PDEVerificationProblem(; N=3, z_min=0.01, z_max=0.1,
@@ -70,6 +75,8 @@ end
     @test pde_result.mesh.z === pde_result.solution.z
     @test pde_result.mesh.t === pde_result.solution.t_snapshots
     @test pde_result.diagnostics.mesh_points == 3
+    @test pde_result.diagnostics.problem_kind == :pde_verification
+    @test pde_result.diagnostics.successful
     @test pde_result.provenance.source_status == "IMPL-inferred"
 end
 

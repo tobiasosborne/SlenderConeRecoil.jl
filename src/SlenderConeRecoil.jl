@@ -11,6 +11,7 @@ include("composite.jl")
 include("outer_hierarchy.jl")
 include("pde.jl")
 include("provenance.jl")
+include("diagnostics.jl")
 include("api.jl")
 
 end # module

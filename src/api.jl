@@ -292,17 +292,16 @@ function PDEVerificationProblem(; ε::Real=0.1, epsilon::Union{Nothing,Real}=not
                                solver_settings=merge(parameters, domain, solver)))
 end
 
-function _inner_result_diagnostics(sol::InnerSolution)
+function _inner_result_specific_diagnostics(sol::InnerSolution)
     (final_residual=sol.final_residual,
      final_residual_norm=sol.final_residual_norm,
      iterations=sol.iterations,
      converged=sol.converged,
-     termination_reason=sol.termination_reason,
-     mesh_points=length(sol.ξ))
+     termination_reason=sol.termination_reason)
 end
 
-_solution_diagnostics_with_mesh(diagnostics::NamedTuple, mesh_points::Int) =
-    merge(diagnostics, (mesh_points=mesh_points,))
+_result_diagnostics(sol; problem_kind::Symbol, existing::NamedTuple=(;)) =
+    merge(existing, _normalized_diagnostic_fields(sol; problem_kind=problem_kind))
 
 function _cone_result_parameters(problem::ConeSimilarityProblem,
                                  solution::InnerSolution)
@@ -321,15 +320,17 @@ function ProblemResult(problem::ConeSimilarityProblem, solution::InnerSolution)
     mesh = (ξ=solution.ξ,)
     ProblemResult{ConeSimilarityProblem,InnerSolution}(
         problem, solution, _cone_result_parameters(problem, solution), domain, mesh,
-        _inner_result_diagnostics(solution), problem.provenance)
+        _result_diagnostics(solution; problem_kind=:cone_similarity,
+                            existing=_inner_result_specific_diagnostics(solution)),
+        problem.provenance)
 end
 
 function ProblemResult(problem::OuterMatchingProblem, solution::OuterSolution)
     domain = (ξ_min=first(solution.ξ), ξ_max=last(solution.ξ),
               ξ_match=problem.domain.ξ_match)
     mesh = (ξ=solution.ξ,)
-    diagnostics = _solution_diagnostics_with_mesh(solution.diagnostics,
-                                                  length(solution.ξ))
+    diagnostics = _result_diagnostics(solution; problem_kind=:outer_matching,
+                                      existing=solution.diagnostics)
     ProblemResult{OuterMatchingProblem,OuterSolution}(
         problem, solution, (ε=solution.ε,), domain, mesh, diagnostics,
         problem.provenance)
@@ -339,8 +340,8 @@ function ProblemResult(problem::CompositeProfileProblem, solution::CompositeSolu
     domain = (ξ_min=first(solution.ξ), ξ_max=last(solution.ξ),
               ξ_match=solution.diagnostics.ξ_match)
     mesh = (ξ=solution.ξ,)
-    diagnostics = _solution_diagnostics_with_mesh(solution.diagnostics,
-                                                  length(solution.ξ))
+    diagnostics = _result_diagnostics(solution; problem_kind=:composite_profile,
+                                      existing=solution.diagnostics)
     ProblemResult{CompositeProfileProblem,CompositeSolution}(
         problem, solution, (ε=solution.ε,), domain, mesh, diagnostics,
         problem.provenance)
@@ -351,8 +352,8 @@ function ProblemResult(problem::PDEVerificationProblem, solution::PDESolution)
               t_start=first(solution.t_snapshots),
               t_end=last(solution.t_snapshots))
     mesh = (z=solution.z, t=solution.t_snapshots)
-    diagnostics = _solution_diagnostics_with_mesh(solution.diagnostics,
-                                                  length(solution.z))
+    diagnostics = _result_diagnostics(solution; problem_kind=:pde_verification,
+                                      existing=solution.diagnostics)
     ProblemResult{PDEVerificationProblem,PDESolution}(
         problem, solution, (ε=solution.ε,), domain, mesh, diagnostics,
         problem.provenance)

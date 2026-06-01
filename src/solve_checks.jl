@@ -13,8 +13,16 @@ end
 
 function _solution_diagnostics(context::AbstractString, endpoint, requested_endpoint;
                                retcode=nothing, saved_points::Int=0)
+    successful = retcode !== nothing &&
+                 string(retcode) in ("Success", "Terminated") &&
+                 isfinite(Float64(endpoint))
+    if successful && isfinite(Float64(requested_endpoint))
+        tol = _endpoint_tolerance(requested_endpoint)
+        successful = abs(Float64(endpoint) - Float64(requested_endpoint)) <= tol
+    end
     (context=String(context),
      retcode=retcode,
+     successful=successful,
      endpoint=Float64(endpoint),
      requested_endpoint=Float64(requested_endpoint),
      saved_points=saved_points)

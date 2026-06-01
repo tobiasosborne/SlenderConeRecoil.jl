@@ -5,6 +5,7 @@ const TEST_GROUP = lowercase(get(ENV, "SLENDER_RECOIL_TEST_GROUP", "fast"))
 const FAST_TEST_FILES = (
     "test_public_api_wrappers.jl",
     "test_provenance_metadata.jl",
+    "test_diagnostics.jl",
     "test_bead1.jl",
     "test_bead2.jl",
     "test_bead3.jl",
@@ -60,6 +61,8 @@ end
         :SolverSettings, :ArtifactMetadata, :PackageMetadata,
         :ProvenanceMetadata, :as_namedtuple, :package_metadata,
         :default_recoil_provenance_metadata,
+        :DiagnosticSummary, :residual_norm, :mesh_summary,
+        :domain_summary, :diagnostic_summary, :diagnostics_succeeded,
     )
 
     exported = names(SlenderConeRecoil)
