@@ -32,6 +32,47 @@ CompositeSolution(ξ, S, U, ε) =
                        ξ_match=NaN, ξ_min=NaN, ξ_max=NaN,
                        fit_points=0, successful=false))
 
+function _composite_parts(inner::InnerSolution, outer::OuterSolution,
+                          ξ_grid::Vector{Float64},
+                          S_inner_interp::Vector{Float64},
+                          U_inner_interp::Vector{Float64},
+                          S_outer_interp::Vector{Float64},
+                          U_outer_interp::Vector{Float64},
+                          S_overlap::Vector{Float64},
+                          fit, ξ_min::Float64, ξ_max::Float64)
+    inner_region = _asymptotic_region(
+        :inner;
+        variables=(independent=:ξ, dependent=(:S, :U)),
+        transform=(z=:ξ, R=:S, u=:U),
+        assumptions=("near-tip reconstructed primitive-variable region",
+                     "validity and boundary data pending Decent-King 2008 article body"),
+        truncation=(order=:current_reconstructed_model,),
+        source_ids=("IMPL-inferred-cone_similarity",),
+        mesh=(ξ=ξ_grid,),
+        data=(S=S_inner_interp, U=U_inner_interp),
+        diagnostics=(ξ_min=ξ_min, ξ_max=ξ_max))
+    outer_region = _asymptotic_region(
+        :outer;
+        variables=(independent=:ξ, dependent=(:s₁, :u₁), base=:εξ),
+        transform=(S_outer=:εξ_plus_s₁, U_outer=:u₁),
+        assumptions=("linearised reconstructed outer region",
+                     "matching constants pending Decent-King 2008 article body"),
+        truncation=(order=:first_reconstructed_outer_correction,),
+        source_ids=("IMPL-inferred-outer_matching",),
+        mesh=(ξ=ξ_grid,),
+        data=(S=S_outer_interp, U=U_outer_interp, ε=outer.ε),
+        diagnostics=(ξ_min=ξ_min, ξ_max=ξ_max))
+    common = _common_part(; slope=fit.slope, intercept=fit.intercept,
+                          ξ_match=fit.ξ_match, ξ_min=ξ_min, ξ_max=ξ_max,
+                          fit_points=fit.fit_points, values=S_overlap)
+    CompositeParts(inner_region, outer_region, common,
+                   ("additive composite S_inner + S_outer - S_common",
+                    "common part is a fitted local diagnostic, not a source-transcribed matching formula"),
+                   (source_status=_DEFAULT_SOURCE_STATUS,
+                    ξ_min=ξ_min, ξ_max=ξ_max,
+                    ξ_match=fit.ξ_match))
+end
+
 # ── Overlap extraction ─────────────────────────────────────────────────
 """
     inner_far_field(sol::InnerSolution, ξ_match)
@@ -118,6 +159,9 @@ function composite_solution(inner::InnerSolution, outer::OuterSolution;
     fit = _inner_far_field_fit(inner, fit_ξ_match)
     S_overlap = [fit.slope * ξ + fit.intercept for ξ in ξ_grid]
     U_overlap = zeros(length(ξ_grid))
+    parts = _composite_parts(inner, outer, ξ_grid, S_inner_interp, U_inner_interp,
+                             S_outer_interp, U_outer_interp, S_overlap, fit,
+                             ξ_min, ξ_max)
 
     # Additive composite
     S_comp = S_inner_interp .+ S_outer_interp .- S_overlap
@@ -129,6 +173,9 @@ function composite_solution(inner::InnerSolution, outer::OuterSolution;
                    ξ_min=ξ_min,
                    ξ_max=ξ_max,
                    fit_points=fit.fit_points,
+                   common_part=parts.common,
+                   parts=parts,
+                   source_status=_DEFAULT_SOURCE_STATUS,
                    successful=true)
     CompositeSolution(ξ_grid, S_comp, U_comp, ε, diagnostics)
 end

@@ -100,6 +100,24 @@ using SlenderConeRecoil
         @test comp.diagnostics.ξ_match ≈ 2.0
         @test comp.diagnostics.fit_points == count(x -> x > 2.0, ξ)
         @test comp.S ≈ 0.1 .* comp.ξ atol=1e-12
+
+        parts = comp.diagnostics.parts
+        common = comp.diagnostics.common_part
+        @test parts isa CompositeParts
+        @test parts.inner isa AsymptoticRegion
+        @test parts.outer isa AsymptoticRegion
+        @test common isa CommonPart
+        @test parts.common === common
+        @test parts.inner.name == :inner
+        @test parts.outer.name == :outer
+        @test parts.inner.source_status == "IMPL-inferred"
+        @test parts.outer.source_status == "IMPL-inferred"
+        @test common.source_status == "IMPL-inferred"
+        @test common.coefficients.slope ≈ 0.1 atol=1e-12
+        @test common.coefficients.intercept ≈ 0.05 atol=1e-12
+        @test evaluate_common_part(common, comp.ξ) ≈ 0.1 .* comp.ξ .+ 0.05 atol=1e-12
+        @test parts.inner.data.S ≈ 0.1 .* comp.ξ .+ 0.05 atol=1e-12
+        @test parts.outer.data.S ≈ 0.1 .* comp.ξ atol=1e-12
     end
 
     @testset "Composite construction runs for reconstructed inner/outer solves" begin
