@@ -1,12 +1,21 @@
 # Higher-order outer expansion: CAS-derived hierarchy + full nonlinear solver.
 #
+# Ledger status, per
+# docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md:
+# the 2001 precursor has an outer expansion with oscillatory harmonics and
+# half-integer powers in different variables. The hierarchy below is a local
+# reconstructed CAS experiment for the package's primitive S,U equations, not a
+# source-confirmed Decent-King 2008 outer hierarchy.
+#
 # The CAS substitutes the ansatz S = εξ + ε³σ₁ + ε⁵σ₂, U = ε²ω₁ + ε⁴ω₂
 # into the similarity ODEs, expands in ε, and collects at each order.
 # This verifies the first-order equations and derives second-order forcing.
 #
 # The numerical solver goes beyond linearisation by integrating the FULL
 # nonlinear similarity ODE outward from a matching point where the inner
-# solution is well-resolved. This is equivalent to summing all ε-orders.
+# solution is well-resolved. This is a local diagnostic extension of the
+# reconstructed S,U system, not a source-backed summation of the paper's
+# asymptotic hierarchy.
 
 using DifferentialEquations
 
@@ -36,8 +45,9 @@ end
 
 Substitute the outer ansatz into the similarity ODEs, expand in ε,
 and collect at each order. Returns Dict{Int, (mass, momentum)} of
-symbolic equations. This verifies the first-order outer ODE and
-derives the second-order forcing terms automatically.
+symbolic equations for the local reconstructed S,U system. This checks
+internal algebra only; the ε-power structure and coefficient equations are not
+source-confirmed Decent-King formulae.
 """
 function derive_outer_equations(; order::Int=5)
     ε = Sym(:ε); ξ = Sym(:ξ)
@@ -104,9 +114,9 @@ HierarchySolution(ξ, S, Sξ, Sξξ, U, ε) =
     solve_outer_full(inner; ξ_match=15.0, ξ_max=80.0)
 
 Solve the FULL nonlinear similarity ODE outward from ξ_match, seeded
-by the inner solution's state. This is equivalent to summing the outer
-ε-expansion to all orders — the nonlinear ODE captures interactions
-that the linearised outer solver misses.
+by the inner solution's state. This local diagnostic solve captures nonlinear
+interactions in the reconstructed S,U system, but it is not a source-backed
+all-orders outer expansion.
 
 The result extends the inner solution into the far-field without the
 drift that accumulates when shooting from the tip.
@@ -115,6 +125,9 @@ function solve_outer_full(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0,
                           maxiters::Int=1_000_000)
     _require_matching_interval(inner, ξ_match, ξ_max; context="outer full solve")
     ε = inner.S[end] / inner.ξ[end]
+    _require_positive_finite_epsilon(ε; context="outer full solve inferred ε")
+    maxiters > 0 ||
+        throw(ArgumentError("outer full solve requires maxiters > 0; got $maxiters"))
 
     # Extract inner state at matching point
     S_m  = _interp_val_strict(inner.ξ, inner.S, ξ_match; context="outer full solve S")
@@ -143,13 +156,17 @@ end
     solve_outer_linearised(inner; ξ_match=15.0, ξ_max=80.0)
 
 First-order linearised outer solver (for comparison with full nonlinear).
-Solves the linearised ODE from ξ_match outward — equivalent to the O(ε³)
-term in the formal hierarchy derived by the CAS.
+Solves the reconstructed linearised ODE from ξ_match outward. The comparison
+is local/exploratory; it is not yet tied to source-confirmed matching constants
+or Decent-King coefficient equations.
 """
 function solve_outer_linearised(inner; ξ_match::Float64=15.0, ξ_max::Float64=80.0,
                                 maxiters::Int=500_000)
     _require_matching_interval(inner, ξ_match, ξ_max; context="outer linearised hierarchy solve")
     ε = inner.S[end] / inner.ξ[end]
+    _require_positive_finite_epsilon(ε; context="outer linearised hierarchy solve inferred ε")
+    maxiters > 0 ||
+        throw(ArgumentError("outer linearised hierarchy solve requires maxiters > 0; got $maxiters"))
 
     s_m  = _interp_val_strict(inner.ξ, inner.S, ξ_match; context="outer linearised hierarchy solve S") - ε * ξ_match
     sp_m = _interp_val_strict(inner.ξ, inner.Sξ, ξ_match; context="outer linearised hierarchy solve Sξ") - ε

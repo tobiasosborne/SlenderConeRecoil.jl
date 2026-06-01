@@ -9,8 +9,8 @@ Working implementation aimed at becoming a faithful computational reproduction o
 2. **1D slender model** (bead 3): Reconstructed primitive mass + momentum with κ = 1/R - Rzz (azimuthal + axial curvature)
 3. **Similarity reduction** (bead 4): Source-backed Keller-Miksis t^{2/3} length scaling, plus reconstructed primitive ODE system in S(ξ), U(ξ)
 4. **Inner BVP** (bead 5): Local 4-component ODE [S, S', S'', U], 3D damped Newton over (ξ₀, S₀, S''₀), Rodas5P stiff solver. Produces the current implementation's blob + neck + capillary waves.
-5. **Outer linearisation** (bead 6): 4-component [s₁, s₁', s₁'', u₁] with S''' dispersive term
-6. **Composite** (bead 7): Additive inner + outer - overlap
+5. **Outer linearisation** (bead 6): Local reconstructed 4-component [s₁, s₁', s₁'', u₁] with S''' dispersive term
+6. **Composite** (bead 7): Local diagnostic additive inner + outer - fitted overlap
 7. **PDE verification** (bead 8): Method of lines, FBDF implicit, non-uniform FD, Rzzz term
 8. **Figures** (bead 9): 7 figures including matched asymptotic profiles and tip shape
 9. **Documentation** (bead 10): docs/method.md
@@ -28,7 +28,7 @@ the old numbered bead plan is provenance rather than the active task list.
 ### Current implementation outputs:
 - Inner solution local regression: ξ₀ ≈ 2.76, S₀ ≈ 0.24, 6-10 capillary wave oscillations
 - PDE convergence and similarity collapse are internal consistency checks, not Decent--King benchmarks
-- Matched asymptotic composite shows the current reconstructed inner/outer structure, pending source-confirmed matching formulae
+- Matched-asymptotic-inspired composite shows the current reconstructed inner/outer structure, pending source-confirmed matching formulae
 
 ## What's NOT done / known limitations
 

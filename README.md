@@ -1,6 +1,6 @@
 # SlenderConeRecoil.jl
 
-A provisional computational reconstruction of S. P. Decent and A. C. King's surface-tension-driven recoil problem for a slender fluid cone, solved via Keller--Miksis similarity scaling and matched asymptotic expansions. The implementation is currently being reconciled against the primary source ledger in `docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md`; quantitative Decent--King fidelity claims should be treated as provisional until the 2008 article body is available.
+A provisional computational reconstruction of S. P. Decent and A. C. King's surface-tension-driven recoil problem for a slender fluid cone, using Keller--Miksis similarity scaling and local matched-asymptotic-inspired diagnostics. The implementation is currently being reconciled against the primary source ledger in `docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md`; quantitative Decent--King fidelity claims should be treated as provisional until the 2008 article body is available.
 
 ## Background
 
@@ -22,7 +22,7 @@ The project has four layers, each in its own source file(s):
 
 **Inner BVP solver** (`src/inner.jl`). Solves the reconstructed nonlinear similarity ODEs as a 4-component system $[S,\, S',\, S'',\, U]$ with the dispersive $S'''$ term from axial curvature. Shooting from the tip with $S'(\xi_0)=0$ (rounded tip), $U(\xi_0)=\tfrac{4}{5}\xi_0$ (local regularity condition), integrated with Rodas5P. Three far-field conditions (slope, velocity, curvature decay) are matched by 3D damped Newton. These conditions and constants are local implementation data, not paper benchmarks.
 
-**Outer solver and matched composite** (`src/outer.jl`, `src/outer_hierarchy.jl`, `src/composite.jl`). The repository contains hand-coded and CAS-assisted checks of a candidate linearised outer ODE using the ansatz $S = \varepsilon\xi + \varepsilon^3\sigma_1 + \varepsilon^5\sigma_2$. The physically correct outer boundary and matching data are still under review. An additive composite with hemispherical tip cap gives the current full-profile construction from $S=0$ to the far-field cone.
+**Outer solver and matched composite** (`src/outer.jl`, `src/outer_hierarchy.jl`, `src/composite.jl`). The repository contains hand-coded and CAS-assisted checks of a candidate linearised outer ODE using the ansatz $S = \varepsilon\xi + \varepsilon^3\sigma_1 + \varepsilon^5\sigma_2$. Source-confirmed outer boundary conditions, matching constants, and composite formulae are still blocked on the 2008 article body. The current additive composite uses a fitted linear common part as a local diagnostic construction.
 
 **PDE verification** (`src/pde.jl`). The time-dependent 1D slender model is solved directly by method of lines: 2nd-order finite differences on a tanh-stretched grid, implicit FBDF time integration. Rescaling PDE snapshots to similarity variables is used as an internal consistency check against the computed $S(\xi)$.
 
@@ -62,7 +62,7 @@ The reconstructed velocity field $U(\xi)$ peaks near the tip in the current sign
 
 ### Matched asymptotic composite
 
-The current composite blends the local inner solution with the local outer solution to give a single profile from $S = 0$ at the axis through the blob to the undisturbed cone. The CAS-derived hierarchy currently suggests that higher-order $\varepsilon$-corrections are small at $\varepsilon = 0.1$, but this has not yet been cross-checked against the paper's asymptotic ordering.
+The current composite blends the local inner solution with the local outer solution to give a single reconstructed profile. The CAS-derived hierarchy is an internal algebra check for the package's current $S,U$ equations; its $\varepsilon$-power structure and higher-order terms have not yet been cross-checked against the paper's asymptotic ordering.
 
 ![Matched asymptotic](figures/fig6_matched_asymptotic.png)
 

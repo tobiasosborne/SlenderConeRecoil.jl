@@ -1,7 +1,7 @@
 using Test
 using SlenderConeRecoil
 
-@testset "Matching and composite" begin
+@testset "Matching and composite (local diagnostic construction)" begin
 
     @testset "Clamping interpolation helper" begin
         xs = [1.0, 2.0, 3.0, 4.0]
@@ -21,7 +21,7 @@ using SlenderConeRecoil
     end
 
     @testset "Inner far-field extraction" begin
-        # Mock an inner solution with linear far-field S ≈ 0.1ξ
+        # Mock a local/exploratory common part with linear far-field S ≈ 0.1ξ.
         ξ = collect(0.1:0.5:25.0)
         S = 0.1 .* ξ .+ 0.05  # slope=0.1, intercept=0.05
         Sξ = 0.1 .* ones(length(ξ))
@@ -36,7 +36,7 @@ using SlenderConeRecoil
         @test_throws ArgumentError SlenderConeRecoil.inner_far_field(sol, 30.0)
     end
 
-    @testset "Validated matching and overlap domains" begin
+    @testset "Validated matching and overlap domains for local diagnostics" begin
         ξ = collect(0.0:1.0:10.0)
         S = 0.1 .* ξ .+ 0.05
         Sξ = 0.1 .* ones(length(ξ))
@@ -51,8 +51,11 @@ using SlenderConeRecoil
         @test_throws ArgumentError solve_outer_matched(inner; ξ_match=-1.0, ξ_max=12.0)
         @test_throws ArgumentError solve_outer_matched(inner; ξ_match=11.0, ξ_max=12.0)
         @test_throws ArgumentError solve_outer_matched(inner; ξ_match=5.0, ξ_max=5.0)
+        @test_throws ArgumentError solve_outer_matched(inner; ξ_match=5.0, ξ_max=12.0, maxiters=0)
         @test_throws ArgumentError solve_outer_full(inner; ξ_match=-1.0, ξ_max=12.0)
+        @test_throws ArgumentError solve_outer_full(inner; ξ_match=5.0, ξ_max=12.0, maxiters=0)
         @test_throws ArgumentError solve_outer_linearised(inner; ξ_match=11.0, ξ_max=12.0)
+        @test_throws ArgumentError solve_outer_linearised(inner; ξ_match=5.0, ξ_max=12.0, maxiters=0)
 
         disjoint_outer = OuterSolution([20.0, 21.0], [0.0, 0.0], [0.0, 0.0],
                                        [0.0, 0.0], [0.0, 0.0], 0.1)
@@ -66,9 +69,20 @@ using SlenderConeRecoil
         @test_throws ArgumentError composite_solution(inner, outer; ξ_match=1.0)
         @test_throws ArgumentError composite_solution(inner, outer; ξ_match=10.0)
         @test_throws ArgumentError overlap_residual(inner, outer; ξ_start=1.0, ξ_end=3.0)
+
+        invalid_epsilon_outer = OuterSolution(outer_ξ, zeros(length(outer_ξ)), zeros(length(outer_ξ)),
+                                              zeros(length(outer_ξ)), zeros(length(outer_ξ)), 0.0)
+        @test_throws ArgumentError composite_solution(inner, invalid_epsilon_outer; n_points=10)
+        @test_throws ArgumentError overlap_residual(inner, invalid_epsilon_outer)
+
+        zero_far_field = InnerSolution(ξ, zeros(length(ξ)), zeros(length(ξ)),
+                                       zeros(length(ξ)), zeros(length(ξ)), 0.0, 0.0, 0.0)
+        @test_throws ArgumentError solve_outer_matched(zero_far_field; ξ_match=5.0, ξ_max=12.0)
+        @test_throws ArgumentError solve_outer_full(zero_far_field; ξ_match=5.0, ξ_max=12.0)
+        @test_throws ArgumentError solve_outer_linearised(zero_far_field; ξ_match=5.0, ξ_max=12.0)
     end
 
-    @testset "Composite subtracts fitted overlap" begin
+    @testset "Composite subtracts fitted overlap as a local common-part diagnostic" begin
         ξ = collect(0.0:1.0:10.0)
         S = 0.1 .* ξ .+ 0.05
         Sξ = 0.1 .* ones(length(ξ))
@@ -88,7 +102,7 @@ using SlenderConeRecoil
         @test comp.S ≈ 0.1 .* comp.ξ atol=1e-12
     end
 
-    @testset "Composite construction runs" begin
+    @testset "Composite construction runs for reconstructed inner/outer solves" begin
         inner = solve_inner_bvp(ξ₀=0.0, S₀=1.0, ξ_max=20.0, ε=0.1)
         outer = solve_outer_driven(ε=0.1, ξ_min=2.0, ξ_max=20.0)
 
@@ -99,7 +113,7 @@ using SlenderConeRecoil
         @test all(isfinite, comp.U)
     end
 
-    @testset "Composite smoothness" begin
+    @testset "Composite smoothness for reconstructed inner/outer solves" begin
         inner = solve_inner_bvp(ξ₀=0.0, S₀=1.0, ξ_max=20.0, ε=0.1)
         outer = solve_outer_driven(ε=0.1, ξ_min=2.0, ξ_max=20.0)
         comp = composite_solution(inner, outer; n_points=200)
@@ -112,7 +126,7 @@ using SlenderConeRecoil
         @test maximum(abs.(slopes)) < 100.0
     end
 
-    @testset "Overlap residual is bounded" begin
+    @testset "Overlap residual is bounded for reconstructed inner/outer solves" begin
         inner = solve_inner_bvp(ξ₀=0.0, S₀=1.0, ξ_max=15.0, ε=0.1)
         outer = solve_outer_driven(ε=0.1, ξ_min=2.0, ξ_max=15.0)
 

@@ -1,7 +1,17 @@
 using Test
 using SlenderConeRecoil
 
-@testset "Outer linearised problem" begin
+@testset "Outer linearised problem (local reconstructed equations)" begin
+
+    @testset "Public outer solve validates local domain assumptions" begin
+        @test_throws ArgumentError solve_outer(ε=0.0, ξ_min=5.0, ξ_max=50.0)
+        @test_throws ArgumentError solve_outer(ε=-0.1, ξ_min=5.0, ξ_max=50.0)
+        @test_throws ArgumentError solve_outer(ε=Inf, ξ_min=5.0, ξ_max=50.0)
+        @test_throws ArgumentError solve_outer(ε=0.1, ξ_min=0.0, ξ_max=50.0)
+        @test_throws ArgumentError solve_outer(ε=0.1, ξ_min=50.0, ξ_max=5.0)
+        @test_throws ArgumentError solve_outer(ε=0.1, ξ_min=5.0, ξ_max=50.0, seed=NaN)
+        @test_throws ArgumentError solve_outer(ε=0.1, ξ_min=5.0, ξ_max=50.0, maxiters=0)
+    end
 
     @testset "Zero perturbation is (nearly) steady" begin
         # With seed=0 at large ξ, the solution should stay near zero
@@ -38,7 +48,8 @@ using SlenderConeRecoil
 
     @testset "Driven solution produces nontrivial response" begin
         sol = solve_outer_driven(ε=0.1, ξ_min=2.0, ξ_max=40.0)
-        # With a nonzero seed, there should be some perturbation
+        # Local diagnostic only: this is not a published Decent-King matching mode.
+        # With a nonzero seed, there should be some perturbation.
         max_s1 = maximum(abs.(sol.s₁))
         @test max_s1 > 0  # nontrivial
         @test all(isfinite, sol.s₁)
@@ -59,8 +70,8 @@ using SlenderConeRecoil
     end
 
     @testset "Linearised mass equation consistency" begin
-        # At a point where s₁, s₁', u₁ are known, verify u₁' satisfies
-        # the linearised mass: 2s₁ + 2εu₁ - 2ξs₁' + εξu₁' = 0
+        # Internal algebra check for the reconstructed linearised mass equation:
+        # 2s₁ + 2εu₁ - 2ξs₁' + εξu₁' = 0.
         ε = 0.1; ξ_test = 5.0
         s₁ = 0.1; s₁p = 0.02; s₁pp = 0.0; u₁ = 0.05
         dy = zeros(4)

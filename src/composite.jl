@@ -1,5 +1,14 @@
 # Matching and composite solution: combine inner and outer solutions.
 #
+# Ledger status, per
+# docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md:
+# - C2001: inner/outer regions and an intermediate-coordinate matching idea are
+#   source-backed in the precursor, but in different A,R variables with
+#   OCR-limited formulae and constants.
+# - IMPL-inferred/BLOCKED-2008: the additive S_inner + S_outer - S_overlap
+#   composite and the fitted linear common part below are local diagnostic
+#   constructions, not source-confirmed Decent-King 2008 composite formulae.
+#
 # Inner solution: valid near the tip, S_inner(ξ), U_inner(ξ)
 # Outer solution: S_outer = εξ + s₁(ξ), U_outer = u₁(ξ)
 #
@@ -30,6 +39,8 @@ CompositeSolution(ξ, S, U, ε) =
 Extract the asymptotic behavior of the inner solution for large ξ.
 In the far field, S_inner ~ c₁·ξ (linear growth).
 Returns (slope, intercept) from a linear fit to S(ξ) for ξ > ξ_match.
+This is a local diagnostic common-part estimate, not a source-backed matching
+constant.
 """
 function inner_far_field(sol::InnerSolution, ξ_match::Float64)
     fit = _inner_far_field_fit(sol, ξ_match)
@@ -65,7 +76,9 @@ end
 Construct the additive composite solution:
   S_comp(ξ) = S_inner(ξ) + S_outer(ξ) - S_overlap(ξ)
 
-where S_overlap = slope·ξ + intercept (the common asymptotic form).
+where S_overlap = slope·ξ + intercept. This fitted common part is a local
+diagnostic overlap estimate; the source-confirmed Decent-King composite and
+matching constants remain blocked pending the 2008 article body.
 When ξ_match is not supplied, the fit starts at the lower edge of the
 common inner/outer overlap.
 
@@ -76,6 +89,7 @@ function composite_solution(inner::InnerSolution, outer::OuterSolution;
                             n_points::Int=500,
                             ξ_match::Union{Nothing,Float64}=nothing)
     ε = outer.ε
+    _require_positive_finite_epsilon(ε; context="composite construction outer ε")
 
     # Determine overlap region: where both solutions are valid
     ξ_min, ξ_max = _common_overlap_interval(inner, outer; context="composite construction")
@@ -177,12 +191,15 @@ end
                      ξ_start=nothing, ξ_end=nothing)
 
 Compute the mismatch between inner and outer solutions in the overlap region.
-Returns the max |S_inner(ξ) - S_outer(ξ)| relative to S_outer.
+Returns the max |S_inner(ξ) - S_outer(ξ)| relative to S_outer. This is an
+implementation diagnostic for the current reconstructed equations, not a
+published Decent-King error norm.
 """
 function overlap_residual(inner::InnerSolution, outer::OuterSolution;
                           ξ_start::Union{Nothing,Float64}=nothing,
                           ξ_end::Union{Nothing,Float64}=nothing)
     ε = outer.ε
+    _require_positive_finite_epsilon(ε; context="overlap residual outer ε")
     ξ_min, ξ_max = _common_overlap_interval(inner, outer; context="overlap residual")
     ξ_lo = something(ξ_start, ξ_min)
     ξ_hi = something(ξ_end, ξ_max)

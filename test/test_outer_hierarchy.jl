@@ -1,8 +1,10 @@
 using Test
 using SlenderConeRecoil
 
-@testset "Outer hierarchy CAS" begin
+@testset "Outer hierarchy CAS (local reconstructed S,U algebra)" begin
     @testset "derive_outer_equations expands Laurent coefficients cleanly" begin
+        # Internal consistency only. These coefficients are not source-backed
+        # Decent-King outer hierarchy equations.
         eqs = derive_outer_equations(order=5)
         rendered = sprint(show, eqs)
 

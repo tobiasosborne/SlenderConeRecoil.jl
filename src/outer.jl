@@ -1,5 +1,14 @@
 # Outer linearised problem with axial curvature.
 #
+# Ledger status, per
+# docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md:
+# - C2001/C2008-meta: conical far field, small aspect ratio, small-time
+#   similarity scaling, inner/outer regions, and rapidly oscillating waves are
+#   source-backed at the level described in the ledger.
+# - IMPL-inferred/BLOCKED-2008: this primitive-variable linearisation, the
+#   state [s₁, s₁', s₁'', u₁], the base-state forcing, and the current matching
+#   data are local reconstructed equations pending the 2008 article body.
+#
 # The similarity ODEs (with axial curvature):
 #   2S + 2S'(U - ξ) + SU' = 0                          [mass]
 #   -(2/9)U + (4/9)(U - ξ)U' - S'/S² - S''' = 0       [momentum]
@@ -73,12 +82,14 @@ end
 """
     solve_outer(; ε=0.1, ξ_min=3.0, ξ_max=50.0)
 
-Solve the outer linearised problem by integrating inward from ξ_max.
+Solve the local reconstructed outer linearised problem by integrating inward from ξ_max.
 At ξ_max, all perturbations are zero (unperturbed cone) except a small
 seed to excite the decaying modes.
 """
 function solve_outer(; ε::Float64=0.1, ξ_min::Float64=3.0, ξ_max::Float64=50.0,
                       seed::Float64=0.0, maxiters::Int=500_000)
+    _require_outer_solve_parameters(ε, ξ_min, ξ_max, seed, maxiters;
+                                    context="outer inward solve")
     # Initial condition at ξ_max: small perturbation
     y0 = [seed, 0.0, 0.0, 0.0]
     tspan = (ξ_max, ξ_min)  # integrate inward
@@ -109,13 +120,18 @@ end
 Solve the outer problem by extracting the perturbation state from the inner
 solution at ξ_match and integrating the linearised ODE *outward* from there.
 
-This is the physically correct matching: the inner solution's far-field
-oscillatory/decaying behavior seeds the outer solution.
+This is a local diagnostic matching construction: the inner solution's
+far-field oscillatory/decaying behavior seeds the reconstructed outer
+linearised solve. It is not yet a source-transcribed Decent-King matching
+condition.
 """
 function solve_outer_matched(inner; ξ_match::Float64=15.0, ξ_max::Float64=100.0,
                              maxiters::Int=500_000)
     _require_matching_interval(inner, ξ_match, ξ_max; context="outer matched solve")
     ε = inner.S[end] / inner.ξ[end]  # estimate ε from far-field slope
+    _require_positive_finite_epsilon(ε; context="outer matched solve inferred ε")
+    maxiters > 0 ||
+        throw(ArgumentError("outer matched solve requires maxiters > 0; got $maxiters"))
 
     # Interpolate inner state at matching point
     s₁_m = _interp_val_strict(inner.ξ, inner.S, ξ_match; context="outer matched solve S") - ε * ξ_match
@@ -138,6 +154,29 @@ function solve_outer_matched(inner; ξ_match::Float64=15.0, ξ_max::Float64=100.
     u₁_vals = [sol.u[i][4] for i in eachindex(sol.u)]
 
     OuterSolution(ξ_vals, s₁_vals, s₁p_vals, s₁pp_vals, u₁_vals, ε, diagnostics)
+end
+
+function _require_positive_finite_epsilon(ε::Float64; context::AbstractString)
+    isfinite(ε) && ε > 0 ||
+        throw(ArgumentError("$context requires positive finite ε; got $ε"))
+    nothing
+end
+
+function _require_outer_solve_parameters(ε::Float64, ξ_min::Float64, ξ_max::Float64,
+                                         seed::Float64, maxiters::Int;
+                                         context::AbstractString)
+    _require_positive_finite_epsilon(ε; context=context)
+    isfinite(ξ_min) ||
+        throw(ArgumentError("$context requires finite ξ_min; got $ξ_min"))
+    isfinite(ξ_max) ||
+        throw(ArgumentError("$context requires finite ξ_max; got $ξ_max"))
+    0 < ξ_min < ξ_max ||
+        throw(ArgumentError("$context requires 0 < ξ_min < ξ_max; got ξ_min=$ξ_min and ξ_max=$ξ_max"))
+    isfinite(seed) ||
+        throw(ArgumentError("$context requires finite seed; got $seed"))
+    maxiters > 0 ||
+        throw(ArgumentError("$context requires maxiters > 0; got $maxiters"))
+    nothing
 end
 
 # Validate an interpolation table before callers rely on endpoint and domain semantics.
