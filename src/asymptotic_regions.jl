@@ -173,6 +173,18 @@ end
 
 common_part_values(common::CommonPart, ξs) = evaluate_common_part(common, ξs)
 
+function Base.getproperty(common::CommonPart, name::Symbol)
+    name === :coefficients &&
+        return (slope=getfield(common, :slope),
+                intercept=getfield(common, :intercept))
+    getfield(common, name)
+end
+
+function Base.propertynames(common::CommonPart, private::Bool=false)
+    names = fieldnames(CommonPart)
+    private ? (:coefficients, names...) : (:coefficients, names...)
+end
+
 function _region_summary(region::AsymptoticRegion)
     (name=region.name,
      source_status=region.source_status,
@@ -366,4 +378,3 @@ as_namedtuple(parts::CompositeParts) =
      common=as_namedtuple(parts.common),
      assumptions=parts.assumptions,
      diagnostics=parts.diagnostics)
-end

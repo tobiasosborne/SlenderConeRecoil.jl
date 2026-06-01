@@ -64,22 +64,79 @@ using SlenderConeRecoil
         @test_throws ArgumentError composite_solution(inner, disjoint_outer; n_points=10)
         @test_throws ArgumentError composite_solution(inner, touching_outer; n_points=10)
         @test_throws ArgumentError overlap_residual(inner, disjoint_outer)
+        @test_throws ArgumentError overlap_window_diagnostics(inner, disjoint_outer)
         @test_throws ArgumentError composite_solution(inner, outer; ξ_grid=[2.0, 1.0])
         @test_throws ArgumentError composite_solution(inner, outer; ξ_grid=[1.0, 3.0])
         @test_throws ArgumentError composite_solution(inner, outer; ξ_match=1.0)
         @test_throws ArgumentError composite_solution(inner, outer; ξ_match=10.0)
         @test_throws ArgumentError overlap_residual(inner, outer; ξ_start=1.0, ξ_end=3.0)
+        @test_throws ArgumentError overlap_window_diagnostics(inner, outer; ξ_start=1.0, ξ_end=3.0)
+        @test_throws ArgumentError overlap_window_diagnostics(inner, outer; window_fraction=1.0)
+        @test_throws ArgumentError overlap_window_diagnostics(inner, outer; window_count=1)
+        @test_throws ArgumentError overlap_window_diagnostics(inner, outer; min_points=2)
+        @test_throws ArgumentError overlap_window_diagnostics(inner, outer; fit_orders=(1, 1))
+        @test_throws ArgumentError overlap_window_diagnostics(inner, outer; fit_orders=(-1,))
 
         invalid_epsilon_outer = OuterSolution(outer_ξ, zeros(length(outer_ξ)), zeros(length(outer_ξ)),
                                               zeros(length(outer_ξ)), zeros(length(outer_ξ)), 0.0)
         @test_throws ArgumentError composite_solution(inner, invalid_epsilon_outer; n_points=10)
         @test_throws ArgumentError overlap_residual(inner, invalid_epsilon_outer)
+        @test_throws ArgumentError overlap_window_diagnostics(inner, invalid_epsilon_outer)
 
         zero_far_field = InnerSolution(ξ, zeros(length(ξ)), zeros(length(ξ)),
                                        zeros(length(ξ)), zeros(length(ξ)), 0.0, 0.0, 0.0)
         @test_throws ArgumentError solve_outer_matched(zero_far_field; ξ_match=5.0, ξ_max=12.0)
         @test_throws ArgumentError solve_outer_full(zero_far_field; ξ_match=5.0, ξ_max=12.0)
         @test_throws ArgumentError solve_outer_linearised(zero_far_field; ξ_match=5.0, ξ_max=12.0)
+    end
+
+    @testset "Overlap window diagnostics report stable and unstable matching" begin
+        ξ = collect(0.0:1.0:10.0)
+        S_stable = 0.1 .* ξ .+ 0.05
+        Sξ_stable = 0.1 .* ones(length(ξ))
+        Sξξ = zeros(length(ξ))
+        U = zeros(length(ξ))
+        inner_stable = InnerSolution(ξ, S_stable, Sξ_stable, Sξξ, U, 0.0,
+                                     S_stable[1], 0.0)
+
+        outer_ξ = collect(2.0:1.0:10.0)
+        outer_stable = OuterSolution(outer_ξ, fill(0.05, length(outer_ξ)),
+                                     zeros(length(outer_ξ)),
+                                     zeros(length(outer_ξ)),
+                                     zeros(length(outer_ξ)), 0.1)
+
+        stable = overlap_window_diagnostics(inner_stable, outer_stable;
+                                            window_fraction=0.5,
+                                            window_count=5)
+        @test stable.window.ξ_min ≈ 2.0
+        @test stable.window.ξ_max ≈ 10.0
+        @test stable.fit_coefficients.slope ≈ 0.1 atol=1e-12
+        @test stable.fit_coefficients.intercept ≈ 0.05 atol=1e-12
+        @test stable.mismatch_norm ≈ 0.0 atol=1e-12
+        @test stable.stable
+        @test stable.classification == :stable_overlap
+        @test stable.sensitivity.sensitivity_norm ≤ stable.sensitivity.tolerance
+        @test stable.truncation_sensitivity.orders == (1, 2)
+        @test stable.truncation_sensitivity.stable
+        @test stable.sensitivity.truncation === stable.truncation_sensitivity
+        @test length(stable.windows) == 5
+        @test stable.source_status == "IMPL-inferred"
+
+        S_curved = 0.1 .* ξ .+ 0.05 .+ 0.02 .* (ξ .- 6.0).^2
+        inner_unstable = InnerSolution(ξ, S_curved, Sξ_stable, Sξξ, U, 0.0,
+                                       S_curved[1], 0.0)
+
+        unstable = overlap_window_diagnostics(inner_unstable, outer_stable;
+                                              window_fraction=0.5,
+                                              window_count=5,
+                                              stability_tolerance=0.05)
+        @test !unstable.stable
+        @test unstable.classification == :unstable_overlap
+        @test unstable.sensitivity.sensitivity_norm > unstable.sensitivity.tolerance
+        @test isfinite(unstable.mismatch_norm)
+        @test isfinite(unstable.fit_coefficients.slope)
+        @test isfinite(unstable.fit_coefficients.intercept)
+        @test length(unstable.truncation_sensitivity.results) == 2
     end
 
     @testset "Composite subtracts fitted overlap as a local common-part diagnostic" begin
@@ -99,6 +156,14 @@ using SlenderConeRecoil
         @test comp.diagnostics.overlap_intercept ≈ 0.05 atol=1e-12
         @test comp.diagnostics.ξ_match ≈ 2.0
         @test comp.diagnostics.fit_points == count(x -> x > 2.0, ξ)
+        @test comp.diagnostics.overlap_window.ξ_min ≈ 2.0
+        @test comp.diagnostics.overlap_window.ξ_max ≈ 10.0
+        @test comp.diagnostics.fit_coefficients.slope ≈ 0.1 atol=1e-12
+        @test comp.diagnostics.fit_coefficients.intercept ≈ 0.05 atol=1e-12
+        @test comp.diagnostics.mismatch_norm ≥ 0.0
+        @test comp.diagnostics.sensitivity isa NamedTuple
+        @test comp.diagnostics.truncation_sensitivity.orders == (1, 2)
+        @test comp.diagnostics.overlap_diagnostics.source_status == "IMPL-inferred"
         @test comp.S ≈ 0.1 .* comp.ξ atol=1e-12
 
         parts = comp.diagnostics.parts

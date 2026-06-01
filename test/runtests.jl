@@ -57,6 +57,7 @@ end
         :continue_inner_bvp,
         :solve_outer, :solve_outer_driven, :solve_outer_matched, :OuterSolution,
         :composite_solution, :CompositeSolution, :overlap_residual,
+        :overlap_window_diagnostics,
         :AsymptoticRegion, :CommonPart, :CompositeParts,
         :evaluate_common_part,
         :derive_outer_equations, :eval_sexpr, :solve_outer_full,
