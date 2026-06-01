@@ -18,6 +18,40 @@ Working implementation aimed at becoming a faithful computational reproduction o
 The current Beads tracker now drives review remediation and package upgrades;
 the old numbered bead plan is provenance rather than the active task list.
 
+## Current worklog and resume point
+
+Last updated: 2026-06-01 07:32 +02:00.
+
+The package-upgrade umbrella is `scr-8l4`. Work has been completed and pushed
+through `scr-8l4.22` / `UP-REP1`, with latest implementation commit
+`7fdd121 docs: define reference data schema`. The fast package gate was checked
+after that point and passed:
+
+- public API: 182/182 tests
+- fast gate: 840/840 tests
+
+Recent completed upgrade commits:
+
+- `fab7e9c` - PDE conservation/domain/grid/retcode diagnostics.
+- `e17605a` - quantitative similarity-collapse diagnostics.
+- `a82e329` - mapped/similarity-frame PDE verifier.
+- `9b26496` - independent PDE discretization checks.
+- `7fdd121` - reference data schema and artifact policy.
+
+Current active Beads state:
+
+- `scr-8l4.23` / `UP-REP2` is claimed/in progress but not implemented. Scope:
+  add a deterministic cheap/reference benchmark suite covering inner BVP,
+  residual evaluation, outer/composite matching, PDE short run, collapse
+  metrics, and figure-data generation, while recording Julia/package/thread,
+  solver, tolerance, and diagnostic metadata.
+- Remaining open chain after `scr-8l4.23`: `scr-8l4.24` through `scr-8l4.33`
+  (`UP-REP3`, `UP-REP4`, `UP-REP5`, `UP-BVP4`, `UP-BVP5`, and `UP-GEN1`
+  through `UP-GEN5`).
+
+Resume by running `bd prime`, `git status --short --branch`, and
+`bd show scr-8l4.23`. Keep Julia jobs serial in this shared environment.
+
 ### Bug fix history:
 - **15 bugs** found in initial audit (root cause: momentum sign error ∂/∂z(1/R) → -∂/∂z(1/R))
 - **7 more** from reviewer round 1 (FD stencils, allocations, canonical ordering)
