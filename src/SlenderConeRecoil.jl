@@ -19,5 +19,6 @@ include("collocation.jl")
 include("continuation.jl")
 include("waves.jl")
 include("collapse.jl")
+include("mapped_pde.jl")
 
 end # module

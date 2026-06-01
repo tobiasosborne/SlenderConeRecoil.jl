@@ -67,6 +67,8 @@ end
         :solve_pde, :PDESolution, :rescale_to_similarity,
         :pde_conservation_diagnostics,
         :similarity_collapse_diagnostics,
+        :MappedPDESolution, :mapped_coordinate_transform,
+        :solve_mapped_pde,
         :AbstractRecoilProblem,
         :ConeSimilarityProblem, :OuterMatchingProblem,
         :CompositeProfileProblem, :PDEVerificationProblem,

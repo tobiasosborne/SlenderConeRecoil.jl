@@ -465,6 +465,113 @@ end
             data.z, data.t, data.R, data.u; xi_window=(2.0, 1.0))
     end
 
+    @testset "Mapped coordinate transform consistency" begin
+        xi = [1.0, 2.0, 4.0]
+        S = [0.2, 0.3, 0.5]
+        U = [1.0, 0.5, -0.25]
+        transform = mapped_coordinate_transform(xi, S, U, 8.0;
+                                                exponent=2 / 3,
+                                                time_offset=0.0)
+
+        @test transform.effective_time == 8.0
+        @test transform.length_scale ≈ 4.0
+        @test transform.velocity_scale ≈ 1 / 3
+        @test transform.z ≈ 4.0 .* xi
+        @test transform.R ≈ 4.0 .* S
+        @test transform.u ≈ (1 / 3) .* U
+        @test !haskey(transform, :coordinate_transform)
+
+        @test_throws ArgumentError mapped_coordinate_transform(
+            [1.0, 1.0, 2.0], S, U, 8.0)
+        @test_throws DomainError mapped_coordinate_transform(
+            xi, [0.2, -0.1, 0.5], U, 8.0)
+        @test_throws ArgumentError mapped_coordinate_transform(
+            xi, S, U, 0.0; time_offset=0.0)
+        @test_throws ArgumentError mapped_coordinate_transform(
+            xi, S, U, 8.0; exponent=0.0)
+    end
+
+    @testset "Mapped PDE verifier diagnostics" begin
+        mapped = solve_mapped_pde(epsilon=0.1, N=24, xi_min=1.0,
+                                  xi_max=8.0,
+                                  effective_time_start=0.25,
+                                  effective_time_end=1.0,
+                                  n_snapshots=4)
+        alias_mapped = solve_mapped_pde(ε=0.1, N=8, xi_min=1.0,
+                                        xi_max=3.0,
+                                        effective_time_start=0.25,
+                                        effective_time_end=0.5,
+                                        n_snapshots=2)
+        diagnostics = mapped.diagnostics
+
+        @test mapped isa MappedPDESolution
+        @test diagnostics_succeeded(alias_mapped)
+        @test diagnostics_succeeded(mapped)
+        @test length(mapped.xi) == 24
+        @test length(mapped.t_snapshots) == 4
+        @test length(mapped.z) == 4
+        @test length(mapped.R) == 4
+        @test length(mapped.u) == 4
+        @test diagnostics.source_status == "IMPL-inferred"
+        @test occursin("not a full transformed PDE solve",
+                       diagnostics.diagnostic_basis)
+        @test diagnostics.coordinate_system == :similarity_mapped
+        @test diagnostics.coordinate_transform ==
+              "z = ell(t) * xi; R = ell(t) * S; u = ell_dot(t) * U"
+        @test diagnostics.xi_domain.min ≈ 1.0
+        @test diagnostics.xi_domain.max ≈ 8.0
+        @test diagnostics.xi_domain.points == 24
+        @test length(diagnostics.length_scales) == 4
+        @test all(diff(diagnostics.length_scales) .> 0)
+        @test length(diagnostics.physical_z_ranges) == 4
+        @test diagnostics.common_physical_grid.points == 24
+        @test diagnostics.common_physical_grid.z_min > 0
+
+        reference = diagnostics.fixed_grid_reference
+        @test diagnostics.reaches_longer_effective_similarity_time
+        @test reference.reaches_longer_effective_similarity_time
+        @test reference.fixed_grid_effective_time_limit ≈ 0.25
+        @test reference.final_effective_time ≈ 1.0
+        @test reference.effective_time_ratio ≈ 4.0
+
+        @test diagnostics.mapped_stationarity.status == :ok
+        @test diagnostics.mapped_stationarity.successful
+        @test diagnostics.mapped_stationarity_residual_norm < 1e-12
+        @test diagnostics.residual_norm < 1e-12
+        @test diagnostics.final_residual_norm < 1e-12
+
+        @test haskey(diagnostics, :conservation_diagnostics)
+        @test diagnostics.conservation_diagnostics.pde_data_valid
+        @test diagnostics.pde_data_valid
+        @test diagnostics.positive_radius
+        @test diagnostics.grid_strictly_increasing
+        @test diagnostics.time_strictly_increasing
+        @test diagnostics.retcode_successful
+        @test diagnostics.endpoint_reached
+        @test diagnostics.minimum_radius > 0
+        @test diagnostics.radius_positivity_margin > 0
+        @test isfinite(diagnostics.max_abs_area_mass_balance_residual)
+        @test diagnostics.similarity_collapse_successful
+        @test diagnostics.similarity_collapse_status == :ok
+        @test isfinite(diagnostics.similarity_collapse_score)
+        @test diagnostics.similarity_collapse_score < 1e-2
+
+        summary = diagnostic_summary(mapped)
+        @test summary.successful
+        @test summary.problem_kind == :mapped_pde_verification
+        summary_fields = as_namedtuple(summary)
+        @test summary_fields.mesh_variable == :xi
+        @test summary_fields.reaches_longer_effective_similarity_time
+        @test summary_fields.minimum_radius > 0
+
+        @test_throws ArgumentError solve_mapped_pde(N=4)
+        @test_throws ArgumentError solve_mapped_pde(xi_min=0.0)
+        @test_throws ArgumentError solve_mapped_pde(
+            effective_time_start=1.0, effective_time_end=0.5)
+        @test_throws ArgumentError solve_mapped_pde(
+            fixed_reference_z_max=0.0)
+    end
+
     @testset "Initial condition preserved at t≈0" begin
         pde = solve_pde(ε=0.1, N=50, z_min=1.0, z_max=10.0,
                         t_end=0.001, n_snapshots=2)
