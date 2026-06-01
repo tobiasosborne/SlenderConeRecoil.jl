@@ -185,6 +185,81 @@ end
         end
     end
 
+    @testset "Independent PDE discretization comparison" begin
+        cases = (
+            (:uniform, collect(range(0.2, 2.6, length=97))),
+            (:stretched, SlenderConeRecoil.stretched_grid(97, 0.2, 2.6; β=1.7)),
+        )
+
+        for (name, z) in cases
+            @testset "$name grid" begin
+                mms = _mms_pde_profile(z)
+                rhs = independent_pde_rhs(z, mms.R, mms.u)
+                diagnostics = pde_discretization_comparison(
+                    z, mms.R, mms.u; margin=6, atol=1e-3, rtol=2e-3,
+                    expected_Rt=mms.Rt, expected_ut=mms.ut)
+
+                @test length(rhs) == 2length(z)
+                @test all(isfinite, rhs)
+                @test diagnostics.successful
+                @test diagnostics.status == :ok
+                @test diagnostics.source_status == "IMPL-inferred"
+                @test occursin("not Decent-King benchmark",
+                               diagnostics.diagnostic_basis)
+                @test diagnostics.backend_name ==
+                      "local-polynomial-finite-difference"
+                @test !diagnostics.calls_package_derivative_operator
+                @test diagnostics.independent_stencil.method ==
+                      :vandermonde_moment_weights
+                @test diagnostics.independent_stencil.width == 5
+                @test diagnostics.grid.points == length(z)
+                @test diagnostics.grid.strictly_increasing
+                @test diagnostics.comparison_window.margin == 6
+                @test diagnostics.comparison_window.points == length(z) - 12
+                @test diagnostics.radius_agrees
+                @test diagnostics.velocity_agrees
+                @test diagnostics.radius_max_abs_error <
+                      diagnostics.radius_tolerance
+                @test diagnostics.velocity_max_abs_error <
+                      diagnostics.velocity_tolerance
+                @test diagnostics.radius_max_abs_error < 4e-4
+                @test diagnostics.velocity_max_abs_error < 1.1e-3
+                @test diagnostics.mms_expected_provided
+                @test diagnostics.independent_mms_radius_max_abs_residual <
+                      diagnostics.package_mms_radius_max_abs_residual
+                @test diagnostics.independent_mms_velocity_max_abs_residual <
+                      diagnostics.package_mms_velocity_max_abs_residual
+
+                residual = independent_pde_residual_diagnostics(
+                    z, mms.R, mms.u; margin=6,
+                    expected_rhs=vcat(mms.Rt, mms.ut))
+                @test residual.mms_expected_provided
+                @test residual.successful
+            end
+        end
+
+        z = collect(range(0.2, 2.6, length=65))
+        mms = _mms_pde_profile(z)
+        strict = pde_discretization_comparison(
+            z, mms.R, mms.u; margin=6, atol=0.0, rtol=0.0)
+        @test !strict.successful
+        @test strict.status == :disagreement
+
+        @test_throws ArgumentError independent_pde_rhs(
+            [0.2, 0.3, 0.3, 0.5, 0.7], ones(5), zeros(5))
+        R_bad = copy(mms.R)
+        R_bad[3] = 0.0
+        @test_throws DomainError independent_pde_rhs(z, R_bad, mms.u)
+        @test_throws ArgumentError independent_pde_rhs(
+            z, mms.R[1:end-1], mms.u)
+        @test_throws ArgumentError pde_discretization_comparison(
+            z, mms.R, mms.u; margin=33)
+        @test_throws ArgumentError pde_discretization_comparison(
+            z, mms.R, mms.u; stencil_width=4)
+        @test_throws ArgumentError pde_discretization_comparison(
+            z, mms.R, mms.u; expected_Rt=mms.Rt)
+    end
+
     @testset "PDE RHS validation" begin
         z = collect(range(1.0, 2.0, length=5))
         N = length(z)

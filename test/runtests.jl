@@ -66,6 +66,8 @@ end
         :solve_outer_linearised, :HierarchySolution,
         :solve_pde, :PDESolution, :rescale_to_similarity,
         :pde_conservation_diagnostics,
+        :independent_pde_rhs, :independent_pde_residual_diagnostics,
+        :pde_discretization_comparison,
         :similarity_collapse_diagnostics,
         :MappedPDESolution, :mapped_coordinate_transform,
         :solve_mapped_pde,

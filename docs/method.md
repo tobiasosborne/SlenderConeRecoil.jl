@@ -50,9 +50,11 @@ implemented and should not be described as Decent--King source-backed.
 
 Additive composite: S_comp = S_inner + S_outer - S_overlap, where S_overlap is the common asymptotic form in the intermediate region.
 
-### 6. Verification (`src/pde.jl`)
+### 6. Verification (`src/pde.jl`, `src/pde_independent.jl`)
 
 The full 1D PDE is solved by method of lines (2nd-order FD on a non-uniform stretched grid, FBDF implicit time integration). At late times, rescaling to similarity variables R/t^{2/3} vs z/t^{2/3} should collapse onto the computed similarity solution. This is an internal consistency check, not yet an independently verified reproduction of Decent and King's published numerical results.
+
+`pde_discretization_comparison` provides a dependency-free independent operator check for cheap benchmarks. It assembles local polynomial finite-difference weights directly from moment equations on the supplied grid and compares that RHS with `pde_rhs!`, excluding a documented boundary margin by default. The default tolerances (`atol=5e-3`, `rtol=5e-2`) are implementation-level smooth-state agreement thresholds, not source-backed Decent--King validation tolerances.
 
 ## How to run
 
@@ -80,6 +82,7 @@ Figures are saved to `figures/` as tracked PDF/PNG pairs with
 | `src/outer_hierarchy.jl` | Local integer/Laurent ε hierarchy check, not a source-backed higher-order derivation |
 | `src/composite.jl` | Matched asymptotic composite |
 | `src/pde.jl` | Full 1D PDE (method of lines) |
+| `src/pde_independent.jl` | Dependency-free independent PDE discretization comparison |
 
 ## Source Fidelity Status
 
