@@ -27,6 +27,7 @@ Reports:
 - `03_bvp_continuation_algorithms.md`
 - `04_pde_verification_and_package_architecture.md`
 - `05_package_upgrade_plan.md`
+- `06_decent_king_source_ledger.md`
 
 Source-inventory corrections made during this research pass:
 
