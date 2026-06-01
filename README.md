@@ -1,6 +1,6 @@
 # SlenderConeRecoil.jl
 
-A provisional computational reconstruction of S. P. Decent and A. C. King's surface-tension-driven recoil problem for a slender fluid cone, solved via Keller--Miksis similarity scaling and matched asymptotic expansions. The implementation is currently being reconciled against the primary source, so quantitative Decent--King fidelity claims should be treated as provisional.
+A provisional computational reconstruction of S. P. Decent and A. C. King's surface-tension-driven recoil problem for a slender fluid cone, solved via Keller--Miksis similarity scaling and matched asymptotic expansions. The implementation is currently being reconciled against the primary source ledger in `docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md`; quantitative Decent--King fidelity claims should be treated as provisional until the 2008 article body is available.
 
 ## Background
 
@@ -10,17 +10,17 @@ I started a PhD in free boundary problems in fluid dynamics in the late 1990s. T
 
 When a droplet pinches off from a liquid thread or jet, the remaining tip is approximately conical with small half-angle $\varepsilon$. Capillary pressure scales as $\gamma/R$, so it is large near the sharp tip and small far away. The resulting pressure gradient drives a recoil flow: the tip rounds off into a blob, and capillary waves propagate backward along the cone body.
 
-There is no imposed length scale. Dimensional analysis gives the Keller--Miksis self-similar scaling: all lengths grow as $\ell(t) = (\gamma t^2/\rho)^{1/3}$. Setting $z = \ell(t)\,\xi$, $R = \ell(t)\,S(\xi)$, $u = \dot\ell(t)\,U(\xi)$ reduces the time-dependent PDE to an ODE system in the similarity variable $\xi$.
+There is no imposed length scale. Dimensional analysis gives the Keller--Miksis self-similar scaling: all lengths grow as $\ell(t) = (\gamma t^2/\rho)^{1/3}$. The length scaling and conical far-field assumptions are source-backed by the 2001 precursor and 2008 metadata. The current primitive-variable convention $z = \ell(t)\,\xi$, $R = \ell(t)\,S(\xi)$, $u = \dot\ell(t)\,U(\xi)$, and the resulting $S,U$ ODEs are reconstructed local implementation choices pending the canonical 2008 equations.
 
-The small cone angle $\varepsilon \ll 1$ provides a second simplification. Near the tip (the inner region), the full nonlinear similarity ODEs are solved as a boundary-value problem: a 3D damped Newton iteration over the tip position $\xi_0$, tip radius $S_0$, and tip curvature $S''_0$, shooting outward until $S(\xi) \sim \varepsilon\xi$. Far from the tip (the outer region), the deviation from the undisturbed cone is small and satisfies a linearised ODE driven by the base-state capillary pressure residual. The two are joined by matched asymptotics.
+The small cone angle $\varepsilon \ll 1$ provides a second simplification. The current local inner solver treats the reconstructed nonlinear similarity ODEs as a boundary-value problem: a 3D damped Newton iteration over the tip position $\xi_0$, tip radius $S_0$, and tip curvature $S''_0$, shooting outward until $S(\xi) \sim \varepsilon\xi$. Far from the tip, the current outer solver uses a candidate linearised ODE driven by the base-state capillary pressure residual. The matching and composite formula are implementation reconstructions, not yet source-confirmed Decent--King 2008 formulae.
 
 ## What this code does
 
 The project has four layers, each in its own source file(s):
 
-**Symbolic slender-body algebra** (`src/expr.jl`, `src/series.jl`, `src/slender.jl`, `src/similarity.jl`). A lightweight symbolic CAS -- expression trees with differentiation, substitution, and series expansion in $\varepsilon$ -- encodes and checks parts of the slender-body and similarity algebra used by the current implementation. No dependency on Symbolics.jl; the CAS follows the AST patterns of [TensorGR.jl](https://github.com/tobiasosborne/TensorGR.jl). The derivation still needs to be reconciled line by line against Decent and King.
+**Symbolic slender-body algebra** (`src/expr.jl`, `src/series.jl`, `src/slender.jl`, `src/similarity.jl`). A lightweight symbolic CAS -- expression trees with differentiation, substitution, and series expansion in $\varepsilon$ -- encodes and checks parts of the slender-body and similarity algebra used by the current implementation. No dependency on Symbolics.jl; the CAS follows the AST patterns of [TensorGR.jl](https://github.com/tobiasosborne/TensorGR.jl). The primitive equations are reconstructed/local unless the source ledger marks a fact as 2001-backed or 2008-metadata-backed.
 
-**Inner BVP solver** (`src/inner.jl`). Solves the nonlinear similarity ODEs as a 4-component system $[S,\, S',\, S'',\, U]$ with the dispersive $S'''$ term from axial curvature. Shooting from the tip with $S'(\xi_0)=0$ (rounded tip), $U(\xi_0)=\tfrac{4}{5}\xi_0$ (regularity), integrated with Rodas5P. Three far-field conditions (slope, velocity, curvature decay) are matched by 3D damped Newton.
+**Inner BVP solver** (`src/inner.jl`). Solves the reconstructed nonlinear similarity ODEs as a 4-component system $[S,\, S',\, S'',\, U]$ with the dispersive $S'''$ term from axial curvature. Shooting from the tip with $S'(\xi_0)=0$ (rounded tip), $U(\xi_0)=\tfrac{4}{5}\xi_0$ (local regularity condition), integrated with Rodas5P. Three far-field conditions (slope, velocity, curvature decay) are matched by 3D damped Newton. These conditions and constants are local implementation data, not paper benchmarks.
 
 **Outer solver and matched composite** (`src/outer.jl`, `src/outer_hierarchy.jl`, `src/composite.jl`). The repository contains hand-coded and CAS-assisted checks of a candidate linearised outer ODE using the ansatz $S = \varepsilon\xi + \varepsilon^3\sigma_1 + \varepsilon^5\sigma_2$. The physically correct outer boundary and matching data are still under review. An additive composite with hemispherical tip cap gives the current full-profile construction from $S=0$ to the far-field cone.
 
@@ -32,13 +32,13 @@ The figures and numerical values below describe the current implementation outpu
 
 ### Similarity profile near the tip
 
-The current inner solve produces a blob at $\xi_0 \approx 2.77$ with $S_0 \approx 0.21$, followed by a train of capillary waves that decay toward the undisturbed cone $S = \varepsilon\xi$.
+The current inner solve produces a local reconstructed blob at $\xi_0 \approx 2.76$ with $S_0 \approx 0.24$, followed by a train of capillary waves that decay toward the undisturbed cone $S = \varepsilon\xi$. These numbers are locally blessed regression values, not source benchmarks.
 
 ![Similarity profile](figures/fig1_similarity_profile.png)
 
 ### Capillary wave structure
 
-The excess $S(\xi) - \varepsilon\xi$ reveals 6--10 oscillations with amplitude decaying away from the tip. The dispersive $S'''$ term is essential: without it, the capillary waves vanish.
+The excess $S(\xi) - \varepsilon\xi$ reveals 6--10 local oscillations with amplitude decaying away from the tip. The 2001 precursor and 2008 metadata support the qualitative presence of rapidly oscillating waves; this implementation's count, amplitude, and $S'''$ ordering are still provisional.
 
 ![Blob excess](figures/fig2_blob_excess.png)
 
@@ -56,13 +56,13 @@ The recoiled tip at $t = 1.0$, shown as the full axisymmetric body of revolution
 
 ### Similarity velocity
 
-The velocity field $U(\xi)$ peaks near the tip (fluid pushed away by capillary pressure) and oscillates in phase with the capillary waves before decaying to zero.
+The reconstructed velocity field $U(\xi)$ peaks near the tip in the current sign convention and oscillates in phase with the capillary waves before decaying to zero. This is an implementation output pending source confirmation.
 
 ![Velocity](figures/fig5_velocity.png)
 
 ### Matched asymptotic composite
 
-Inner solution (nonlinear BVP near tip) blended with the outer solution (linearised, or full nonlinear from the matching point) to give a single profile from $S = 0$ at the axis through the blob to the undisturbed cone. The CAS-derived hierarchy currently suggests that higher-order $\varepsilon$-corrections are small at $\varepsilon = 0.1$, but this has not yet been cross-checked against the paper's asymptotic ordering.
+The current composite blends the local inner solution with the local outer solution to give a single profile from $S = 0$ at the axis through the blob to the undisturbed cone. The CAS-derived hierarchy currently suggests that higher-order $\varepsilon$-corrections are small at $\varepsilon = 0.1$, but this has not yet been cross-checked against the paper's asymptotic ordering.
 
 ![Matched asymptotic](figures/fig6_matched_asymptotic.png)
 
@@ -124,7 +124,7 @@ reproducibility artifacts.
 
 ## Known limitations
 
-- Source fidelity is under review. The intended primary source is Decent and King (2008), *IMA Journal of Applied Mathematics* 73(1), 37--68, DOI `10.1093/imamat/hxm043`; previous documentation incorrectly cited a QJMAM DOI as the cone paper.
+- Source fidelity is under review. The authoritative status labels are in `docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md`. The intended primary source is Decent and King (2008), *IMA Journal of Applied Mathematics* 73(1), 37--68, DOI `10.1093/imamat/hxm043`; the article body is not yet locally available, and previous documentation incorrectly cited a QJMAM DOI as the cone paper.
 - The 3D Newton BVP converges to ~2% far-field slope error. A continuation or homotopy method would improve this.
 - The PDE solver is limited to $t \lesssim 0.04$ by stiffness from capillary pressure near the truncated tip. Adaptive mesh refinement would help.
 - The outer expansion is formally leading-order. The CAS machinery for higher orders exists but the $\varepsilon$-power structure mixes oddly with the similarity scaling (the base state has a nonzero momentum residual at $O(\varepsilon^{-1})$).

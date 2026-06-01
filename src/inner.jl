@@ -1,4 +1,14 @@
-# Inner BVP solver: solve the nonlinear similarity ODE near the tip.
+# Inner BVP solver for the reconstructed primitive similarity ODE near the tip.
+#
+# Ledger status, per
+# docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md:
+# - C2001/C2008-meta: inner/outer regions, conical far field, small-time
+#   similarity scaling, and rapidly oscillating waves are source-backed at the
+#   level described in the ledger.
+# - IMPL-inferred: the state [S, S', S'', U], tip regularity used here, far-field
+#   shooting residuals, and constants (ξ₀, S₀, S''₀) are local reconstruction
+#   choices. They are not the 2001 A,R,p0,y0 formulation and are blocked for
+#   2008 confirmation.
 #
 # With axial curvature, the similarity ODE system is:
 #   2S + 2S'(U - ξ) + S·U' = 0                          [mass]
@@ -40,6 +50,10 @@ State: u = [S, Sp, Spp, U] where Sp=S', Spp=S''.
 
 From mass:  U' = -2 - 2·S'·(U-ξ)/S
 From momentum: S''' = -(2/9)U + (4/9)(U-ξ)U' - S'/S²
+
+Ledger status: local reconstructed primitive-variable residuals. This RHS is
+checked for algebraic consistency, but is not a source-transcribed 2008 inner
+equation.
 """
 function inner_rhs!(du, u, p, ξ)
     S, Sp, Spp, U = u
@@ -71,6 +85,10 @@ From momentum with S'=0:  S''' = -(2/9)U + (4/9)(U-ξ₀)(-2)
 With U = (4/5)ξ₀:  S''' = -(10/9)(4/5)ξ₀ + (8/9)ξ₀ = -(8/9)ξ₀ + (8/9)ξ₀ = 0.
 
 So at the tip: S=S₀, S'=0, S''=Sξξ₀ (free), U=(4/5)ξ₀, S'''=0.
+
+Ledger status: IMPL-inferred. The 2001 precursor has different near-tip
+variables and singular behavior; these rounded-tip primitive conditions remain
+provisional until the 2008 article body is available.
 """
 function tip_initial_conditions(ξ₀::Float64, S₀::Float64, Sξξ₀::Float64)
     U₀ = 4/5 * ξ₀
@@ -113,6 +131,9 @@ Solve the inner BVP by 3D Newton shooting over (ξ₀, S₀, S''₀) matching:
   1. S(ξ_max)/ξ_max → ε   (far-field slope)
   2. U(ξ_max) → 0          (far-field velocity)
   3. S''(ξ_max) → 0         (curvature perturbation decays)
+
+Ledger status: IMPL-inferred local BVP. Current numerical values are local
+regression data, not Decent-King source benchmarks.
 """
 function solve_inner_bvp(; ξ₀::Float64=2.79, S₀::Float64=0.28, Sξξ₀::Float64=0.57,
                            ξ_max::Float64=60.0, ε::Float64=0.1,

@@ -1,7 +1,7 @@
 using Test
 using SlenderConeRecoil
 
-@testset "Similarity reduction" begin
+@testset "Similarity reduction source-status checks" begin
     ξ = Sym(:ξ); S = Sym(:S); U = Sym(:U)
     Sξ = Sym(:Sξ); Uξ = Sym(:Uξ)
 
@@ -28,11 +28,14 @@ using SlenderConeRecoil
         @test haskey(sys, :momentum)
     end
 
-    @testset "t cancels (numerical verification)" begin
+    @testset "C2001 Keller-Miksis length scaling with local U convention" begin
+        # The t^(2/3) length scale is source-backed by the 2001 precursor.
+        # The primitive velocity variable U and residual algebra are local
+        # reconstruction checks pending the 2008 article body.
         @test SlenderConeRecoil.verify_t_cancels() == true
     end
 
-    @testset "Mass ODE: numerical evaluation" begin
+    @testset "Mass ODE: local residual numerical evaluation" begin
         # 2S + 2Sξ(U - ξ) + S·Uξ = 0
         # S=1, Sξ=0, U=0, Uξ=-2, ξ=0:
         # 2(1) + 2(0)(0-0) + 1(-2) = 2 - 2 = 0
@@ -42,7 +45,7 @@ using SlenderConeRecoil
         @test result == Num(0)
     end
 
-    @testset "Momentum ODE: numerical evaluation" begin
+    @testset "Momentum ODE: local residual numerical evaluation" begin
         mom = similarity_ode_momentum()
         # U=9, ξ=0, Uξ=0, Sξ=-2, S=1:
         # -(2/9)(9) + 0 - (-2)/1 = -2 + 2 = 0
@@ -61,7 +64,7 @@ using SlenderConeRecoil
         @test result2 == Num(25//6)
     end
 
-    @testset "Momentum ODE with axial curvature" begin
+    @testset "Momentum ODE with axial curvature local residual" begin
         mom_ax = similarity_ode_momentum(axial=true)
         Sξξξ = Sym(:Sξξξ)
         # Same as above plus -S''' term:
@@ -73,15 +76,10 @@ using SlenderConeRecoil
         @test result == Num(19//6)
     end
 
-    @testset "Far-field consistency: S ~ εξ, U ~ (2/3)ξ" begin
-        # In the far field, the cone is undisturbed: R = εz, u = ż·(2/3)
-        # In similarity variables: S = εξ (to leading order) and U = (2/3)ξ
-        # The mass ODE should be satisfied:
-        # 2(εξ) + 2(ε)(2ξ/3 - ξ) + (εξ)(2/3) = 0
-        # 2εξ + 2ε(-ξ/3) + 2εξ/3 = 2εξ - 2εξ/3 + 2εξ/3 = 2εξ
-        # ... this is NOT zero, which means the far-field is more subtle.
-        # Actually, the undisturbed cone has u=0 (fluid at rest), so U=0.
-        # Then: 2S + 2Sξ(0 - ξ) + S·0 = 2S - 2ξSξ = 0
+    @testset "Reconstructed far-field algebra: S ~ εξ, U ~ 0" begin
+        # The source-backed far-field cone is stationary in physical variables.
+        # Under the local primitive U convention, use S = εξ and U = 0:
+        # 2S + 2Sξ(0 - ξ) + S·0 = 2S - 2ξSξ = 0
         # With S = εξ: 2εξ - 2ξ·ε = 0 ✓
         mass = similarity_ode_mass()
         ε = Sym(:ε)

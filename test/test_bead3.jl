@@ -1,7 +1,7 @@
 using Test
 using SlenderConeRecoil
 
-@testset "Slender-body derivation" begin
+@testset "Slender-body local reconstruction algebra" begin
 
     @testset "Curvature expressions" begin
         κ_full = SlenderConeRecoil.curvature_full()
@@ -54,18 +54,19 @@ using SlenderConeRecoil
         @test sys.momentum isa SExpr
     end
 
-    @testset "Slender derivation verification" begin
+    @testset "Local curvature-scaling verification" begin
         @test SlenderConeRecoil.verify_slender_derivation() == true
     end
 
-    @testset "Leading-order 1D system matches known result" begin
-        # The known 1D model from the CLAUDE.md:
+    @testset "Reconstructed leading-order 1D system algebra" begin
+        # Ledger status: this primitive-variable model is IMPL-inferred, not a
+        # transcribed Decent-King source equation. The test checks local algebra:
         #   ∂(R²)/∂t + ∂(R²u)/∂z = 0
-        #   ∂u/∂t + u ∂u/∂z = ∂/∂z (1/R)
+        #   ∂u/∂t + u ∂u/∂z = -∂/∂z (1/R) = Rz/R²
         #
         # Mass eq LHS: 2R·Rt + 2R·Rz·u + R²·uz
-        # Momentum eq LHS: ut + u·uz + Rz/R²
-        #   (note: ∂/∂z(1/R) = -Rz/R², so LHS-RHS = ut + u·uz - (-Rz/R²))
+        # Momentum eq LHS: ut + u·uz - Rz/R²
+        #   (note: ∂/∂z(1/R) = -Rz/R²)
 
         mass = slender_mass_eq()
         mom = slender_momentum_eq()

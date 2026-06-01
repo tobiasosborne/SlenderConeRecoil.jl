@@ -1,15 +1,26 @@
-# Similarity reduction: apply Keller-Miksis t^{2/3} scaling to the 1D model.
+# Similarity reduction for the reconstructed primitive 1D model.
 #
-# Keller-Miksis scaling (nondimensional, γ/ρ = 1):
+# Ledger status, per
+# docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md:
+# - C2001: Keller-Miksis length scale ℓ(t) = (γt²/ρ)^(1/3), represented here
+#   nondimensionally as t^(2/3).
+# - C2001: the 2001 precursor scales a velocity potential, not the primitive
+#   axial velocity U used here.
+# - IMPL-inferred: the primitive velocity convention, transformed mass and
+#   momentum ODEs, and axial-curvature S''' residual are local reconstruction
+#   targets pending extraction of the canonical 2008 article body.
+#
+# Current local convention (nondimensional, γ/ρ = 1):
 #   ℓ(t) = t^{2/3}
 #   z = ℓ(t)·ξ ,  R = ℓ(t)·S(ξ) ,  u = ℓ̇(t)·U(ξ)
 #
 # where ℓ̇ = (2/3)t^{-1/3}.
 #
-# The PDE system becomes an ODE system in (S(ξ), U(ξ)):
-#   2S(U - (2/3)ξ)S' + S²(U' - 2/3) = 0                [mass]
+# The current primitive PDE residual reduces to local ODE residuals in
+# (S(ξ), U(ξ)):
+#   2S + 2S'(U - ξ) + SU' = 0                            [mass]
 #   -(2/9)U + (4/9)(U - ξ)U' - S'/S² = 0                 [momentum]
-#   (replacing the notation: S' = dS/dξ, U' = dU/dξ)
+# with optional axial-curvature term -S'''.
 
 export similarity_ode_mass, similarity_ode_momentum, similarity_system
 
@@ -24,7 +35,7 @@ const sym_Uξ = Sym(:Uξ)     # dU/dξ
 
 # ── Derivation of the similarity ODEs ──────────────────────────────────
 #
-# Starting from the 1D slender model:
+# Starting from the local reconstructed 1D slender model:
 #   (1) ∂(R²)/∂t + ∂(R²u)/∂z = 0
 #   (2) ∂u/∂t + u·∂u/∂z = -∂/∂z(1/R)   [from Bernoulli: capillary recoil]
 #
@@ -98,11 +109,9 @@ const sym_Uξ = Sym(:Uξ)     # dU/dξ
 # Hmm, that doesn't simplify as nicely. Let me re-derive more carefully
 # using the substitution u = (2/3)ℓ̇·U where ℓ̇ = dℓ/dt.
 #
-# Actually, the standard convention in Decent & King uses:
-#   u = ż = (2/3)t^{-1/3} times a velocity variable.
-#
-# For the code, let me just define the system in the form that will be
-# solved numerically. The key expressions:
+# The 2001 source confirms the length and potential scaling, but not this
+# primitive velocity normalization. The code therefore defines the local
+# residuals used by the numerical solvers explicitly:
 
 """
     similarity_ode_mass()
@@ -112,6 +121,9 @@ Mass conservation ODE in similarity variables:
 
 where S' = dS/dξ, U' = dU/dξ.
 Returns the LHS expression (= 0).
+
+Ledger status: IMPL-inferred primitive-variable reduction. Tests check local
+algebraic consistency, not a published Decent-King benchmark equation.
 """
 function similarity_ode_mass()
     # 2S + 2Sξ(U - ξ) + S·Uξ = 0
@@ -131,6 +143,10 @@ Leading order:  -(2/9)U + (4/9)(U - ξ)U' - S'/S² = 0
 With axial:     -(2/9)U + (4/9)(U - ξ)U' - S'/S² - S''' = 0
 
 The -S''' term produces capillary wave dispersion.
+
+Ledger status: IMPL-inferred. The 2001 precursor motivates curvature retention,
+but the primitive momentum residual and axial-curvature ordering are blocked
+pending the 2008 article body.
 """
 function similarity_ode_momentum(; axial::Bool=false)
     expr = add(
@@ -149,6 +165,8 @@ end
 
 Return the similarity ODE system as a named tuple:
   (mass=..., momentum=...)
+
+These are local reconstructed primitive-variable residuals.
 """
 function similarity_system()
     (mass=similarity_ode_mass(), momentum=similarity_ode_momentum())
@@ -163,6 +181,9 @@ time dependence cancels, leaving only ODEs in ξ.
 
 This is done numerically: evaluate the PDE residual at several values
 of t and check that the ratio is independent of t.
+
+Ledger status: the length scale is C2001-backed; this function verifies the
+local primitive-variable algebra under the repository's U convention.
 """
 function verify_t_cancels()
     # Numerically verify that the similarity substitution into the PDE

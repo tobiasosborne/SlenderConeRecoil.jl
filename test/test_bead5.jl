@@ -2,9 +2,11 @@ using Test
 using SlenderConeRecoil
 using LinearAlgebra: norm
 
-@testset "Inner BVP solver (with axial curvature)" begin
+@testset "Inner BVP local reconstruction (with axial curvature)" begin
 
     @testset "Tip initial conditions" begin
+        # Ledger status: IMPL-inferred rounded-tip regularity for the local
+        # primitive S,U system, not a Decent-King source benchmark.
         ic = SlenderConeRecoil.tip_initial_conditions(0.0, 1.0, -0.5)
         @test ic == [1.0, 0.0, -0.5, 0.0]  # [S, S', S'', U]
 
@@ -28,7 +30,7 @@ using LinearAlgebra: norm
         @test all(isfinite, Uv)
     end
 
-    @testset "3D Newton converges" begin
+    @testset "3D Newton local BVP diagnostics" begin
         sol = solve_inner_bvp(ε=0.1)
         @test sol.ξ₀ > 0
         @test sol.S₀ > 0
@@ -63,7 +65,7 @@ using LinearAlgebra: norm
                                                     throw_on_failure=true)
     end
 
-    @testset "ODE residual (with S''' term)" begin
+    @testset "Local ODE residual consistency (with S''' term)" begin
         sol = solve_inner_bvp(ε=0.1)
         n = length(sol.ξ)
         mid = div(n, 2)
@@ -81,9 +83,9 @@ using LinearAlgebra: norm
         end
     end
 
-    @testset "Momentum sign regression" begin
-        # The correct momentum drives flow AWAY from the tip (Rz/R² > 0 for a cone).
-        # Verify: at the tip, U > 0 (recoiling away) and U decreases toward far-field.
+    @testset "Local momentum sign regression" begin
+        # The local reconstructed momentum sign drives flow away from the tip
+        # for the current cone convention. This is not yet a paper benchmark.
         sol = solve_inner_bvp(ε=0.1)
         # Tip velocity should be positive (recoil direction)
         @test sol.U[1] > 0

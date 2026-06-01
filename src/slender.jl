@@ -1,8 +1,17 @@
-# Governing equations and slender-body (lubrication) reduction.
-# Defines the full cylindrical equations, applies the slender ansatz
-# R = εf, φ = Φ₀ + ε²Φ₁ + ..., and extracts the 1D model at leading order.
+# Reconstructed slender-body (lubrication) algebra.
 #
-# The 1D slender model (nondimensional, γ/ρ = 1):
+# Source status, per
+# docs/research/2026-06-01-similarity-methods/06_decent_king_source_ledger.md:
+# - C2001/C2008-meta: inviscid surface-tension recoil of a small-aspect-ratio
+#   cone, initially/far-field conical, with Keller-Miksis length scaling.
+# - C2001: retaining curvature beyond the leading azimuthal term is important
+#   for robust oscillatory simplified-model results.
+# - IMPL-inferred: the primitive variables R(z,t), u(z,t), the mass equation,
+#   the Bernoulli/momentum sign convention, and the optional axial-curvature
+#   residual used below. These are local reconstruction targets pending the
+#   canonical 2008 article body.
+#
+# Current local 1D primitive model (nondimensional, γ/ρ = 1):
 #   ∂(R²)/∂t + ∂(R²u)/∂z = 0        (mass conservation)
 #   ∂u/∂t + u ∂u/∂z = -∂/∂z(1/R) = Rz/R²   (momentum, capillary recoil)
 #
@@ -34,6 +43,10 @@ Full mean curvature κ in cylindrical coordinates:
 
 The first term is azimuthal curvature (1/R at leading order),
 the second is axial curvature (higher order in ε).
+
+Ledger status: the formula is standard geometry and curvature retention is
+motivated by the 2001 precursor; its exact 2008 asymptotic ordering in this
+primitive-variable model is still provisional.
 """
 function curvature_full()
     denom1 = Func(:sqrt, [add(Num(1), pow(sym_Rz, Num(2)))])
@@ -49,6 +62,9 @@ Leading-order curvature for a slender body (ε ≪ 1):
   κ ≈ 1/R
 
 The azimuthal curvature dominates; axial curvature is O(ε²) smaller.
+
+Ledger status: small aspect ratio is source-backed; this primitive reduction
+is a local reconstructed algebra check until the 2008 article body is extracted.
 """
 function curvature_leading()
     pow(sym_R, Num(-1))
@@ -69,6 +85,10 @@ i.e.  2R(Rt + Rz·u) + R²·uz = 0
 
 Dividing by 2R (assuming R ≠ 0):
   Rt + u·Rz + (R/2)·uz = 0
+
+Ledger status: IMPL-inferred. The 2001 precursor uses a potential/free-surface
+kinematic equation in different variables; this primitive conservation law is
+tested as local algebra, not as a transcribed Decent-King equation.
 """
 function slender_mass_eq()
     # ∂(R²)/∂t = 2R·Rt
@@ -91,6 +111,10 @@ With axial curvature (axial=true):
   κ = 1/R - Rzz  →  ut + u·uz - Rz/R² - Rzzz = 0
 
 The -Rzzz term is dispersive and produces capillary waves.
+
+Ledger status: IMPL-inferred. Curvature retention is motivated by the 2001
+precursor, but the primitive momentum equation, sign convention, and axial
+curvature ordering remain provisional until checked against the 2008 article.
 """
 function slender_momentum_eq(; axial::Bool=false)
     lhs = add(sym_ut, mul(sym_u, sym_uz))
@@ -109,6 +133,7 @@ Return the complete 1D slender-body system as a named tuple:
   (mass=..., momentum=...)
 
 Each entry is an SExpr representing the LHS of the equation = 0.
+These are local reconstructed primitive-variable equations.
 """
 function slender_system()
     (mass=slender_mass_eq(), momentum=slender_momentum_eq())
@@ -124,6 +149,9 @@ Derive the 1D slender model from the full equations by:
 3. Verifying that leading-order curvature is 1/R = 1/(εf)
 
 Returns true if the leading-order curvature matches.
+
+This verifies only the local curvature scaling algebra. It is not a
+Decent-King 2008 equation transcription test.
 """
 function verify_slender_derivation(; order::Int=1)
     f = Sym(:f)
